@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src *;">
+  <title>GCP Remoto — Sessão</title>
+  <link rel="stylesheet" href="assets/theme.css">
+  <link rel="stylesheet" href="assets/session.css">
+</head>
+<body>
+  <div class="shell" id="shell">
+    <!-- Barra superior -->
+    <header class="bar" id="bar">
+      <div class="who">
+        <span class="status-dot" id="st-dot"></span>
+        <div class="who-text"><b id="who-name">Conectando…</b><small id="who-sub"></small></div>
+      </div>
+
+      <div class="tools">
+        <div class="grp">
+          <button class="icon-btn active" id="b-control" title="Controlar (mouse e teclado)" data-icon="mouse"></button>
+          <button class="icon-btn" id="b-draw" title="Desenhar na tela" data-icon="pen"></button>
+        </div>
+        <div class="grp">
+          <button class="icon-btn" data-menu="m-view" title="Exibição e tamanho" data-icon="fit"></button>
+          <button class="icon-btn" id="b-full" title="Tela cheia" data-icon="fullscreen"></button>
+          <button class="icon-btn" data-menu="m-quality" title="Qualidade e resolução" data-icon="gauge"></button>
+          <button class="icon-btn" data-menu="m-screens" title="Monitores" data-icon="layers"></button>
+        </div>
+        <div class="grp">
+          <button class="icon-btn" data-menu="m-keys" title="Enviar combinações de teclas" data-icon="keyboard"></button>
+          <button class="icon-btn" data-menu="m-fx" title="Efeitos na tela remota" data-icon="cursorFx"></button>
+          <button class="icon-btn" id="b-files" title="Arquivos" data-icon="folder"></button>
+          <button class="icon-btn" id="b-chat" title="Chat" data-icon="chat"><span class="badge hidden" id="chat-badge"></span></button>
+          <button class="icon-btn" id="b-shot" title="Capturar tela" data-icon="camera"></button>
+        </div>
+      </div>
+
+      <div class="right">
+        <span class="stat" id="stat"></span>
+        <button class="btn sm danger" id="b-close" data-icon="power">Desconectar</button>
+      </div>
+    </header>
+
+    <!-- Barra de desenho -->
+    <div class="drawbar hidden" id="drawbar">
+      <div class="dgrp" id="d-tools"></div>
+      <span class="sep"></span>
+      <div class="dgrp" id="d-colors"></div>
+      <span class="sep"></span>
+      <input type="range" id="d-size" min="1" max="24" value="4" title="Espessura">
+      <span class="sep"></span>
+      <button class="icon-btn sm" id="d-undo" title="Desfazer" data-icon="undo"></button>
+      <button class="icon-btn sm" id="d-redo" title="Refazer" data-icon="redo"></button>
+      <button class="icon-btn sm" id="d-clear" title="Limpar tudo" data-icon="trash"></button>
+      <span class="dhint">Os desenhos aparecem ao vivo na tela do outro computador</span>
+    </div>
+
+    <div class="body">
+      <main class="stage" id="stage">
+        <div class="surface" id="surface">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="ink"></canvas>
+          <textarea id="text-input" class="text-input hidden" rows="1" placeholder="Digite e pressione Enter"></textarea>
+        </div>
+
+        <!-- Conectando / senha / encerrado -->
+        <div class="cover" id="cover">
+          <div class="cover-card">
+            <img src="assets/logo.svg" class="cover-logo" alt="">
+            <h2 id="cv-title">Conectando…</h2>
+            <p id="cv-text" class="muted">Localizando o computador remoto.</p>
+            <div class="spinner" id="cv-spin"></div>
+            <form id="pw-form" class="pw-form hidden" autocomplete="off">
+              <input type="password" class="input" id="pw-input" placeholder="Senha do computador remoto">
+              <label class="mini"><input type="checkbox" id="pw-save"> Salvar nos favoritos</label>
+              <input class="input hidden" id="pw-name" placeholder="Nome personalizado (ex.: PC da Recepção)">
+              <div class="row">
+                <button type="button" class="btn" id="pw-request" data-icon="user">Pedir para aceitar</button>
+                <button type="submit" class="btn primary" data-icon="lock">Entrar</button>
+              </div>
+            </form>
+            <div class="row hidden" id="cv-actions">
+              <button class="btn" id="cv-close">Fechar</button>
+              <button class="btn primary" id="cv-retry" data-icon="refresh">Tentar de novo</button>
+            </div>
+          </div>
+        </div>
+        <div class="dropzone hidden" id="dropzone"><div>Solte para enviar ao computador remoto</div></div>
+      </main>
+
+      <!-- Painel lateral -->
+      <aside class="panel hidden" id="panel">
+        <header class="p-head"><b id="p-title"></b><button class="icon-btn sm" id="p-close" data-icon="x"></button></header>
+        <section class="p-body hidden" id="p-chat">
+          <div class="chat-log" id="chat-log"></div>
+          <form class="chat-form" id="chat-form"><input class="input" id="chat-input" placeholder="Escreva uma mensagem…"><button class="icon-btn" data-icon="send"></button></form>
+        </section>
+        <section class="p-body hidden" id="p-files">
+          <div class="fpane">
+            <div class="fp-head"><span data-icon="monitor"></span><b>Este computador</b></div>
+            <div class="fp-path"><button class="icon-btn sm" id="fl-up" data-icon="up"></button><input class="input" id="fl-path"></div>
+            <div class="flist" id="fl-list"></div>
+          </div>
+          <div class="fmid">
+            <button class="btn sm primary" id="f-upload" data-icon="upload">Enviar ao remoto</button>
+            <button class="btn sm" id="f-download" data-icon="download">Baixar do remoto</button>
+            <small class="muted">Dica: copie arquivos aqui (Ctrl+C) e cole na tela remota (Ctrl+V) — e vice-versa.</small>
+          </div>
+          <div class="fpane">
+            <div class="fp-head"><span data-icon="remote"></span><b>Computador remoto</b></div>
+            <div class="fp-path"><button class="icon-btn sm" id="fr-up" data-icon="up"></button><input class="input" id="fr-path"></div>
+            <div class="flist" id="fr-list"></div>
+          </div>
+          <div class="xlist" id="xlist"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Menus suspensos -->
+  <div class="menu hidden" id="m-view"></div>
+  <div class="menu hidden" id="m-quality"></div>
+  <div class="menu hidden" id="m-screens"></div>
+  <div class="menu hidden" id="m-keys"></div>
+  <div class="menu hidden" id="m-fx"></div>
+
+  <div class="peek" id="peek" title="Mostrar barra"></div>
+
+  <script src="../../node_modules/peerjs/dist/peerjs.min.js"></script>
+  <script src="lib/ui.js"></script>
+  <script src="lib/draw.js"></script>
+  <script src="lib/proto.js"></script>
+  <script src="session.js"></script>
+</body>
+</html>

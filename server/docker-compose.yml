@@ -1,0 +1,16 @@
+# Infraestrutura própria (opcional). O app funciona sem isso, usando o servidor público.
+services:
+  signaling:
+    build: .
+    restart: unless-stopped
+    ports: ["9000:9000"]
+    environment:
+      - KEY=peerjs
+  turn:
+    image: coturn/coturn:4.6.2
+    restart: unless-stopped
+    network_mode: host
+    command: >
+      -n --log-file=stdout --fingerprint --lt-cred-mech
+      --realm=gcp-remoto --user=gcp:TROQUE_ESTA_SENHA
+      --listening-port=3478 --min-port=49160 --max-port=49200

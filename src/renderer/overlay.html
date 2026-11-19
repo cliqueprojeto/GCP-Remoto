@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>GCP Remoto — camada</title>
+  <link rel="stylesheet" href="assets/theme.css">
+  <style>
+    html, body { background: transparent !important; overflow: hidden; }
+    #fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; }
+    body.drawing #fx { pointer-events: auto; cursor: crosshair; }
+
+    .banner { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; background: rgba(12, 18, 32, .82); border: 1px solid rgba(255, 93, 93, .55); color: #fff; font: 600 12.5px var(--font); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); pointer-events: none; }
+    .banner .rec { width: 9px; height: 9px; border-radius: 50%; background: #ff5d5d; animation: pulse 1.4s infinite; box-shadow: 0 0 0 3px rgba(255, 93, 93, .3); }
+
+    .text-input { position: fixed; min-width: 200px; padding: 6px 10px; border-radius: 8px; border: 2px dashed #4fc3f7; background: rgba(5, 10, 20, .55); color: #fff; font: 600 22px var(--font); outline: none; resize: none; }
+  </style>
+</head>
+<body>
+  <canvas id="fx"></canvas>
+  <div class="banner hidden" id="banner"><span class="rec"></span><span id="banner-text">Sessão remota ativa</span></div>
+  <textarea id="text-input" class="text-input" rows="1" style="display:none"></textarea>
+  <script src="lib/draw.js"></script>
+  <script src="overlay.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>GCP Remoto — ferramentas</title>
+  <link rel="stylesheet" href="assets/theme.css">
+  <style>
+    html, body { background: transparent !important; overflow: hidden; margin: 0; }
+    body { padding: 6px; display: inline-block; }
+    /* Widget flutuante */
+    .wdg { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; border-radius: 26px; background: rgba(20, 30, 51, .92); border: 1.5px solid rgba(141, 156, 186, .55); box-shadow: 0 3px 8px rgba(0, 0, 0, .4); color: #fff; user-select: none; }
+    .wdg.expanded { border-radius: 18px; padding: 10px 12px 8px; }
+    .w-row { display: flex; align-items: center; gap: 6px; }
+    .grip { cursor: grab; color: #c9d3e6; display: grid; place-items: center; width: 22px; height: 30px; }
+    .grip:active { cursor: grabbing; }
+    .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: #ff5d5d; box-shadow: 0 0 0 3px rgba(255, 93, 93, .25); }
+    .rec-dot.idle { background: #4fc3f7; box-shadow: 0 0 0 3px rgba(79, 195, 247, .25); }
+    .timer { font: 700 18px var(--mono); letter-spacing: .02em; margin: 0 6px; min-width: 60px; }
+    .wb { width: 36px; height: 36px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: #e8eef9; cursor: pointer; display: grid; place-items: center; }
+    .wb:hover { background: rgba(255, 255, 255, .08); }
+    .wb.active { border-color: rgba(79, 195, 247, .8); background: rgba(79, 195, 247, .16); color: #4fc3f7; }
+    .wb .ic { width: 19px; height: 19px; }
+    .wsep { width: 1px; height: 26px; background: rgba(141, 156, 186, .35); margin: 0 4px; }
+    .wc { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .15); cursor: pointer; padding: 0; }
+    .wc.sel { border-color: #fff; box-shadow: 0 0 0 2px #4fc3f7; }
+    .w-hint { text-align: center; font-size: 11.5px; color: #aab6cc; padding-top: 2px; }
+    .w-label { margin-left: auto; font: 800 11px var(--font); letter-spacing: .1em; color: #ff6b6b; padding: 0 8px; }
+    .w-label.idle { color: #4fc3f7; }
+    #size { width: 96px; }
+    
+    .grip { -webkit-app-region: drag; }
+    .wb, .wc, input, .w-label { -webkit-app-region: no-drag; }
+  </style>
+</head>
+<body>
+  <div class="wdg" id="wdg"></div>
+  <script src="lib/ui.js"></script>
+  <script src="lib/draw.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>

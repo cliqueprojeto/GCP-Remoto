@@ -1,0 +1,17 @@
+# Histórico de versões
+
+## 1.0.0
+
+Primeira versão pública.
+
+- Acesso remoto entre Windows e Linux, nos dois sentidos, por ID de nove dígitos.
+- Senha nova a cada sessão, senha fixa opcional para acesso não supervisionado e janela de aceite com escolha de permissões.
+- Favoritos com nome personalizado, ícone, cor e senha salva; conexões rápidas na janela e na bandeja; sessões recentes.
+- Controle completo de mouse e teclado, com acentos e símbolos em qualquer layout; combinações de teclas; vários monitores; somente visualização.
+- Exibição ajustada, original ou esticada; tamanhos de janela; tela cheia; resolução, quadros por segundo e qualidade ajustáveis.
+- Desenho ao vivo, destaque do cursor, anéis de clique, holofote e widget flutuante de ferramentas.
+- Transferência de arquivos e pastas com Ctrl+C / Ctrl+V, gerenciador lado a lado e arrastar e soltar.
+- Chat, área de transferência sincronizada, captura de tela e atalhos personalizáveis.
+- Avisos estilizados de sessão iniciada e desconectada.
+- Janela "Apoie o projeto" com PIX e Stripe.
+- Pacotes: instalador, portátil e zip para Windows; .deb, .rpm, .pkg.tar.zst e AppImage para Linux.

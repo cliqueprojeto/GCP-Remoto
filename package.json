@@ -1,0 +1,159 @@
+{
+  "name": "gcp-remoto",
+  "productName": "GCP Remoto",
+  "version": "1.0.0",
+  "description": "Acesso remoto gratuito e livre para Windows e Linux: controle total, desenho ao vivo, arquivos com Ctrl+C/Ctrl+V, chat e favoritos. Desenvolvido por Bruno Albertini | Gestão Cultural Pro.",
+  "main": "src/main/main.js",
+  "homepage": "https://github.com/cliqueprojeto/GCP-Remoto",
+  "author": "Bruno Albertini | Gestão Cultural Pro",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "node --test test/core.test.js",
+    "dist:linux": "electron-builder --linux deb rpm pacman AppImage --x64 && node scripts/pacman-zst.js",
+    "dist:win": "electron-builder --win nsis portable zip --x64",
+    "dist": "npm run dist:linux && npm run dist:win",
+    "server": "node server/signaling.js"
+  },
+  "dependencies": {
+    "@nut-tree-fork/libnut-linux": "2.7.5",
+    "@nut-tree-fork/libnut-win32": "2.7.5",
+    "dbus-next": "0.10.2",
+    "peerjs": "1.5.5",
+    "qrcode": "1.5.4",
+    "uiohook-napi": "1.5.4",
+    "x11": "2.3.0"
+  },
+  "devDependencies": {
+    "electron": "38.8.6",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "br.com.gestaoculturalpro.gcpremoto",
+    "productName": "GCP Remoto",
+    "artifactName": "gcp-remoto-${version}-${arch}.${ext}",
+    "npmRebuild": false,
+    "asarUnpack": [
+      "node_modules/@nut-tree-fork/**",
+      "node_modules/uiohook-napi/**"
+    ],
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json",
+      "!**/*.map"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Network",
+      "synopsis": "Acesso remoto gratuito",
+      "maintainer": "Bruno Albertini | Gestão Cultural Pro <cliqueprojeto@users.noreply.github.com>",
+      "vendor": "Gestão Cultural Pro",
+      "executableName": "gcp-remoto",
+      "desktop": {
+        "entry": {
+          "Name": "GCP Remoto",
+          "Comment": "Acesso remoto gratuito",
+          "Keywords": "remote;desktop;acesso;remoto;suporte;",
+          "Categories": "Network;RemoteAccess;"
+        }
+      },
+      "packageCategory": "net"
+    },
+    "deb": {
+      "depends": [
+        "libxtst6",
+        "libnss3",
+        "libgtk-3-0",
+        "libnotify4",
+        "libxss1",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "recommends": [
+        "pipewire",
+        "xdg-desktop-portal"
+      ],
+      "priority": "optional",
+      "artifactName": "GCP-Remoto-${version}-linux-amd64.${ext}"
+    },
+    "rpm": {
+      "depends": [
+        "libXtst",
+        "nss",
+        "gtk3",
+        "libnotify",
+        "libXScrnSaver",
+        "xdg-utils",
+        "at-spi2-core",
+        "libuuid",
+        "libsecret"
+      ],
+      "fpm": [
+        "--rpm-rpmbuild-define=_build_id_links none"
+      ],
+      "artifactName": "GCP-Remoto-${version}-linux-x86_64.${ext}"
+    },
+    "pacman": {
+      "depends": [
+        "libxtst",
+        "nss",
+        "gtk3",
+        "libnotify",
+        "libxss",
+        "xdg-utils",
+        "at-spi2-core",
+        "util-linux-libs",
+        "libsecret"
+      ],
+      "fpm": [],
+      "artifactName": "gcp-remoto-${version}-1-x86_64.${ext}"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable",
+        "zip"
+      ],
+      "artifactName": "GCP-Remoto-${version}-win-x64.${ext}",
+      "legalTrademarks": "Bruno Albertini | Gestão Cultural Pro"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "GCP Remoto",
+      "artifactName": "GCP-Remoto-Instalador-${version}-x64.${ext}",
+      "license": "LICENSE"
+    },
+    "portable": {
+      "artifactName": "GCP-Remoto-Portatil-${version}-x64.${ext}"
+    },
+    "publish": null,
+    "appImage": {
+      "artifactName": "GCP-Remoto-${version}-linux-x86_64.${ext}"
+    },
+    "copyright": "© 2026 Bruno Albertini | Gestão Cultural Pro"
+  },
+  "keywords": [
+    "acesso remoto",
+    "remote desktop",
+    "suporte remoto",
+    "anydesk alternativa",
+    "teamviewer alternativa",
+    "windows",
+    "linux",
+    "biglinux",
+    "gestão cultural pro"
+  ]
+}

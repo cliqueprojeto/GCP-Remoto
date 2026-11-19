@@ -1,0 +1,6 @@
+node_modules/
+server/node_modules/
+dist/
+*.log
+.DS_Store
+build/icon-256.png

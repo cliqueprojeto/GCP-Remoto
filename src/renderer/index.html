@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src *;">
+  <title>GCP Remoto</title>
+  <link rel="stylesheet" href="assets/theme.css">
+  <link rel="stylesheet" href="assets/home.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">
+        <img src="assets/logo.svg" alt="" class="brand-logo">
+        <div><b>GCP Remoto</b><small>Acesso remoto livre</small></div>
+      </div>
+      <nav class="nav" id="nav">
+        <button data-page="home" data-icon="home" class="active">Início</button>
+        <button data-page="favorites" data-icon="star">Favoritos</button>
+        <button data-page="recents" data-icon="clock">Recentes</button>
+        <button data-page="presenter" data-icon="cursorFx">Apresentação</button>
+        <button data-page="settings" data-icon="settings">Configurações</button>
+      </nav>
+      <div class="side-foot">
+        <div id="net-status" class="chip warn"><span class="dot pulse"></span><span>Conectando…</span></div>
+        <small id="version" class="ver"></small>
+        <small class="dev">Desenvolvido por <b>Bruno Albertini</b><br>Gestão Cultural Pro</small>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <form id="connect-form" class="connect" autocomplete="off">
+          <span class="connect-ic" data-icon="remote"></span>
+          <input id="remote-id" class="connect-input" placeholder="Digite o ID do computador remoto" inputmode="numeric" list="id-suggestions" aria-label="ID remoto">
+          <datalist id="id-suggestions"></datalist>
+          <button type="submit" class="btn primary" data-icon="arrowRight">Conectar</button>
+        </form>
+        <button class="icon-btn" id="btn-open-downloads" title="Arquivos recebidos" data-icon="folder"></button>
+        <button class="icon-btn heart" id="btn-support" title="Apoie o projeto" data-icon="heart"></button>
+      </header>
+
+      <nav class="quick" id="quick" aria-label="Conexões rápidas"></nav>
+
+      <!-- Sessão recebida ativa -->
+      <section id="incoming-bar" class="incoming hidden" aria-live="polite">
+        <div class="inc-left">
+          <span class="rec"></span>
+          <div>
+            <b id="inc-title">Sessão remota ativa</b>
+            <small id="inc-sub"></small>
+          </div>
+        </div>
+        <div class="inc-actions">
+          <label class="mini-toggle" title="Permitir que controlem mouse e teclado"><span class="switch"><input type="checkbox" id="inc-control" checked><span></span></span>Controle</label>
+          <label class="mini-toggle" title="Permitir transferência de arquivos"><span class="switch"><input type="checkbox" id="inc-files" checked><span></span></span>Arquivos</label>
+          <button class="btn sm" id="inc-chat" data-icon="chat">Chat</button>
+          <button class="btn sm" id="inc-send" data-icon="upload">Enviar arquivos</button>
+          <button class="btn sm" id="inc-widget" data-icon="widget">Ferramentas</button>
+          <button class="btn sm danger" id="inc-end" data-icon="power">Encerrar</button>
+        </div>
+      </section>
+
+      <div class="pages">
+        <!-- INÍCIO -->
+        <section class="page active" id="page-home">
+          <div class="hero">
+            <div class="hero-card id-card">
+              <div class="hc-head"><span data-icon="monitor"></span>Este dispositivo</div>
+              <div class="big-id" id="my-id">— — —</div>
+              <div class="id-actions">
+                <button class="btn sm" id="copy-id" data-icon="copy">Copiar ID</button>
+                <span class="chip" id="host-os"></span>
+              </div>
+            </div>
+            <div class="hero-card pw-card">
+              <div class="hc-head"><span data-icon="lock"></span>Senha desta sessão</div>
+              <div class="pw-row">
+                <div class="pw" id="my-pw">••••••••</div>
+                <button class="icon-btn" id="pw-toggle" title="Mostrar/ocultar" data-icon="eye"></button>
+                <button class="icon-btn" id="pw-copy" title="Copiar senha" data-icon="copy"></button>
+                <button class="icon-btn" id="pw-new" title="Gerar nova senha" data-icon="refresh"></button>
+              </div>
+              <small class="muted" id="pw-hint">Uma nova senha é gerada a cada sessão.</small>
+              <div class="unattended" id="unattended-state"></div>
+            </div>
+          </div>
+
+          <div class="tiles">
+            <button class="tile t-cyan" id="tile-unattended"><span data-icon="shield"></span><b>Acesso não supervisionado</b><small>Defina uma senha fixa para acessar este computador de qualquer lugar.</small></button>
+            <button class="tile t-violet" id="tile-presenter"><span data-icon="cursorFx"></span><b>Ferramentas de apresentação</b><small>Realce do cursor, cliques, holofote e desenho ao vivo na tela.</small></button>
+            <button class="tile t-amber" id="tile-shortcuts"><span data-icon="keyboard"></span><b>Atalhos personalizados</b><small>Defina suas próprias teclas para cada ação da sessão.</small></button>
+            <button class="tile t-green" id="tile-files"><span data-icon="folder"></span><b>Arquivos recebidos</b><small>Tudo que chegou por transferência ou Ctrl+C / Ctrl+V.</small></button>
+          </div>
+
+          <div class="section-head"><h2>Favoritos</h2><button class="btn ghost sm" data-goto="favorites">Ver todos</button></div>
+          <div class="fav-grid" id="home-favs"></div>
+
+          <div class="section-head"><h2>Sessões recentes</h2><button class="btn ghost sm" data-goto="recents">Ver todas</button></div>
+          <div class="recent-list" id="home-recents"></div>
+        </section>
+
+        <!-- FAVORITOS -->
+        <section class="page" id="page-favorites">
+          <div class="page-head">
+            <div><h1>Favoritos</h1><p class="muted">Salve computadores com um nome personalizado e, se quiser, a senha. Depois é só um clique.</p></div>
+            <button class="btn primary" id="fav-add" data-icon="plus">Adicionar</button>
+          </div>
+          <div class="search"><span data-icon="search"></span><input id="fav-search" class="input" placeholder="Buscar por nome ou ID"></div>
+          <div class="fav-grid" id="fav-list"></div>
+        </section>
+
+        <!-- RECENTES -->
+        <section class="page" id="page-recents">
+          <div class="page-head">
+            <div><h1>Sessões recentes</h1><p class="muted">Os últimos computadores que você acessou.</p></div>
+            <button class="btn ghost" id="recents-clear" data-icon="trash">Limpar</button>
+          </div>
+          <div class="recent-list" id="recent-list"></div>
+        </section>
+
+        <!-- APRESENTAÇÃO -->
+        <section class="page" id="page-presenter">
+          <div class="page-head">
+            <div><h1>Ferramentas de apresentação</h1><p class="muted">Efeitos que aparecem na tela deste computador — e, portanto, para quem está acompanhando a sessão.</p></div>
+            <button class="btn primary" id="presenter-toggle" data-icon="widget">Abrir widget</button>
+          </div>
+          <div class="settings-card" id="fx-panel"></div>
+        </section>
+
+        <!-- CONFIGURAÇÕES -->
+        <section class="page" id="page-settings">
+          <div class="page-head"><div><h1>Configurações</h1></div></div>
+          <div class="tabs" id="set-tabs">
+            <button data-tab="general" class="active">Geral</button>
+            <button data-tab="security">Segurança</button>
+            <button data-tab="video">Vídeo</button>
+            <button data-tab="connection">Conexão</button>
+            <button data-tab="shortcuts">Atalhos</button>
+            <button data-tab="about">Sobre</button>
+          </div>
+          <div class="settings-card" id="set-body"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Chat da sessão recebida -->
+  <aside class="chat-pop hidden" id="host-chat">
+    <header><b>Chat</b><button class="icon-btn sm" id="host-chat-close" data-icon="x"></button></header>
+    <div class="chat-log" id="host-chat-log"></div>
+    <form class="chat-form" id="host-chat-form"><input class="input" id="host-chat-input" placeholder="Escreva uma mensagem…"><button class="icon-btn" data-icon="send"></button></form>
+  </aside>
+
+  <div id="xfers" class="xfers"></div>
+
+  <script src="../../node_modules/peerjs/dist/peerjs.min.js"></script>
+  <script src="lib/ui.js"></script>
+  <script src="lib/draw.js"></script>
+  <script src="lib/proto.js"></script>
+  <script src="lib/settings-ui.js"></script>
+  <script src="lib/support.js"></script>
+  <script src="host.js"></script>
+  <script src="home.js"></script>
+</body>
+</html>

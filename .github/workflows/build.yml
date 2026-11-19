@@ -1,0 +1,87 @@
+name: Compilar e publicar
+
+# Os instaladores vão direto para a página de Releases (não usam a cota de
+# armazenamento de artefatos do Actions, que é pequena em repositórios privados).
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Preparar versão
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Recriar a versão se ela apontar para outro commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha 2>/dev/null || true)
+          if [ -n "$SHA" ] && [ "$SHA" != "$GITHUB_SHA" ]; then
+            gh release delete "$TAG" -R "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" || true
+          fi
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: GCP Remoto ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+
+  linux:
+    name: Linux (.deb, .rpm, .pkg.tar.zst, AppImage)
+    needs: release
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Ferramentas de empacotamento
+        run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools zstd
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:linux
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          overwrite_files: true
+          files: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.pkg.tar.zst
+            dist/*.AppImage
+
+  windows:
+    name: Windows (instalador, portátil e zip)
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Compilar
+        run: npx electron-builder --win nsis portable zip --x64 --config.win.signAndEditExecutable=true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          overwrite_files: true
+          files: |
+            dist/*.exe
+            dist/*.zip

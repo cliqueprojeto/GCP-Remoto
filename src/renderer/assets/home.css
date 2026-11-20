@@ -169,3 +169,23 @@
 .sc-clear:hover { background: var(--surface-3); }
 .sc-clear .ic { width: 18px; height: 18px; }
 .sc-reset-row { padding: 18px 0 14px; }
+
+/* Atualizações e teste de conexão */
+.upd-box, .nt-box { padding: 12px 0 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid rgba(38, 53, 82, .6); }
+.upd-box p, .nt-box p { margin: 0; font-size: 13px; }
+.upd-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.upd-msg { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.upd-new { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: rgba(61, 220, 151, .08); border: 1px solid rgba(61, 220, 151, .35); }
+.upd-new > .ic { width: 26px; height: 26px; color: var(--ok); }
+.upd-new div { flex: 1; } .upd-new b { display: block; } .upd-new small { color: var(--muted); }
+.nt-run { display: flex; align-items: center; gap: 12px; color: var(--muted); padding: 8px 0; }
+.spinner-sm { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--surface-3); border-top-color: var(--accent); animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.nt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nt-grid > div { padding: 12px 14px 12px 44px; position: relative; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--border); }
+.nt-grid b { display: block; font-size: 13.5px; } .nt-grid small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.nt-ok, .nt-warn { position: absolute; left: 14px; top: 13px; }
+.nt-ok .ic { color: var(--ok); } .nt-warn .ic { color: var(--warn); }
+.nt-rec { padding: 12px 14px; border-radius: 12px; background: rgba(79, 195, 247, .08); border: 1px solid rgba(79, 195, 247, .3); font-size: 13.5px; line-height: 1.5; }
+.update-banner { display: flex; align-items: center; gap: 12px; padding: 10px 26px; background: linear-gradient(90deg, rgba(61, 220, 151, .14), rgba(79, 195, 247, .08)); border-bottom: 1px solid rgba(61, 220, 151, .35); font-size: 13.5px; }
+.update-banner .ic { color: var(--ok); } .update-banner span { flex: 1; }

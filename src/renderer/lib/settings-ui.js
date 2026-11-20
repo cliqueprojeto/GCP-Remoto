@@ -106,6 +106,10 @@
     switch (tab) {
       case 'general':
         html = `
+          <div class="sgroup">Atualizações</div>
+          <div class="upd-box" id="upd-box"></div>
+          ${row('Verificar se há atualizações automaticamente', 'As novas versões vêm do repositório do projeto no GitHub (cliqueprojeto/GCP-Remoto).', select('general.updateCheck', st.general.updateCheck || 'startup', [['daily', 'Todos os dias'], ['weekly', 'A cada semana'], ['biweekly', 'A cada duas semanas'], ['monthly', 'A cada mês'], ['startup', 'Sempre que abrir o programa'], ['never', 'Nunca']]))}
+          <div class="sgroup">Geral</div>
           ${row('Nome deste computador', 'Como você aparece para quem conecta.', text('displayName', st.displayName))}
           ${row('Iniciar com o sistema', 'Fica disponível para acesso assim que o computador liga.', toggle('general.startWithSystem', st.general.startWithSystem))}
           ${row('Iniciar minimizado', 'Abre direto na bandeja do sistema.', toggle('general.startMinimized', st.general.startMinimized))}
@@ -133,11 +137,16 @@
       case 'video':
         html = `
           ${row('Resolução transmitida', 'Limite da resolução enviada por este computador e padrão ao acessar outros.', select('session.resolution', st.session.resolution, [['auto', 'Automática (nativa)'], ['3840x2160', '3840 × 2160 (4K)'], ['2560x1440', '2560 × 1440'], ['1920x1080', '1920 × 1080 (Full HD)'], ['1600x900', '1600 × 900'], ['1366x768', '1366 × 768'], ['1280x720', '1280 × 720 (HD)'], ['1024x576', '1024 × 576']]))}
+          ${row('Perfil de transmissão', 'Velocidade mantém o movimento fluido mesmo com internet fraca (como TeamViewer); Qualidade prioriza a nitidez do texto.', select('session.profile', st.session.profile || 'speed', [['speed', 'Velocidade — quase em tempo real (recomendado)'], ['balanced', 'Equilibrado'], ['quality', 'Qualidade de imagem']]))}
+          ${row('Codificação de vídeo', 'Automática usa a placa de vídeo (hardware) quando disponível.', select('session.codec', st.session.codec || 'auto', [['auto', 'Automática (recomendado)'], ['h264', 'H.264'], ['vp8', 'VP8'], ['vp9', 'VP9'], ['av1', 'AV1']]))}
+          ${row('Ponteiro na tela remota', 'Ponto: marca exatamente onde o clique cai, sem duplicar a seta do outro computador.', select('session.pointer', st.session.pointer || 'dot', [['dot', 'Ponto preciso (recomendado)'], ['arrow', 'Seta'], ['none', 'Oculto (só a seta remota)']]))}
           ${row('Quadros por segundo', '', select('session.fps', st.session.fps, [[15, '15 fps (economia)'], [24, '24 fps'], [30, '30 fps (recomendado)'], [60, '60 fps (fluido)']]))}
           ${row('Qualidade', 'Mais qualidade usa mais internet.', select('session.quality', st.session.quality, [['low', 'Baixa — conexões lentas'], ['medium', 'Equilibrada'], ['high', 'Alta'], ['max', 'Máxima — rede local']]))}`;
         break;
       case 'connection':
         html = `
+          <div class="sgroup">Teste de conexão</div>
+          <div class="nt-box" id="nt-box"><p class="muted">Mede o servidor, o tipo de rede e a aceleração de vídeo deste computador e recomenda as melhores configurações.</p><button class="btn primary" id="nt-run">${icon('gauge')}Testar conexão e recomendar</button></div>
           <div class="sgroup">Servidor de localização (sinalização)</div>
           ${row('Endereço', 'Por padrão usa o servidor público gratuito. Você pode hospedar o seu (pasta server/ do projeto).', text('server.host', st.server.host, '0.peerjs.com'))}
           ${row('Porta', '', `<input class="input" style="width:120px" type="number" data-k="server.port" value="${st.server.port}">`)}
@@ -208,6 +217,8 @@
     if ($('#open-support')) $('#open-support').onclick = () => GSupport.open();
     if ($('#sc-reset')) $('#sc-reset').onclick = async () => { await save('shortcuts', st.defaultShortcuts); renderSettings(tab, el, ctx); };
 
+    if ($('#upd-box')) renderUpdateBox($('#upd-box'));
+    if ($('#nt-run')) $('#nt-run').onclick = () => runNetTest($('#nt-box'), st);
     el.querySelectorAll('[data-clear]').forEach(btn => btn.onclick = async () => {
       st.shortcuts[btn.dataset.clear] = '';
       await save('shortcuts', st.shortcuts);
@@ -240,5 +251,51 @@
     });
   }
 
-  root.GSettings = { renderSettings, renderEffects, SHORTCUT_LABELS };
+  // ---------- Atualizações ----------
+  const KIND_LABEL = { nsis: 'Windows (instalado)', portable: 'Windows (portátil)', appimage: 'Linux (AppImage)', pacman: 'Arch / BigLinux / Manjaro (pacote)', deb: 'Ubuntu / Debian (pacote)', rpm: 'Fedora (pacote)', other: 'outro sistema' };
+  async function renderUpdateBox(box, extra = '') {
+    const u = await gcp.invoke('update:info');
+    const when = u.lastCheck ? new Date(u.lastCheck).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+    box.innerHTML = `<p class="muted">Versão instalada: <b>${esc(u.current)}</b> · ${esc(KIND_LABEL[u.kind] || u.kind)} · última verificação: ${esc(when)}</p>
+      ${u.pending ? `<div class="upd-new">${icon('download')}<div><b>Nova versão ${esc(u.pending.latest)} disponível</b><small>Será instalada do jeito certo para o seu sistema.</small></div><button class="btn primary" id="upd-go">Atualizar agora</button></div>` : ''}
+      <div class="upd-actions"><button class="btn" id="upd-check">${icon('refresh')}Verificar agora</button><button class="btn ghost" id="upd-page">${icon('globe')}Página de versões</button></div>
+      <div class="upd-msg" id="upd-msg">${extra}</div>`;
+    box.querySelector('#upd-page').onclick = () => gcp.invoke('update:page');
+    box.querySelector('#upd-check').onclick = async () => {
+      const msg = box.querySelector('#upd-msg'); msg.textContent = 'Verificando…';
+      try { const r = await gcp.invoke('update:check'); renderUpdateBox(box, r.newer ? '' : `Você já está na versão mais recente (${esc(r.latest)}).`); }
+      catch (e) { msg.textContent = String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); }
+    };
+    const go = box.querySelector('#upd-go'); if (go) go.onclick = () => GSettings.installUpdate(box.querySelector('#upd-msg'));
+  }
+  async function installUpdate(msgEl) {
+    const off = gcp.on('update:progress', (d, t) => { if (msgEl) msgEl.innerHTML = `Baixando… ${t ? Math.round(d / t * 100) + '%' : GProto.fmtBytes(d)}<div class="progress"><i style="width:${t ? d / t * 100 : 30}%"></i></div>`; });
+    try { const r = await gcp.invoke('update:install'); if (msgEl) msgEl.textContent = r.message; toast(r.message, 'ok', 9000); }
+    catch (e) { const m = String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); if (msgEl) msgEl.textContent = m; toast(m, 'error', 9000); }
+    finally { off(); }
+  }
+
+  // ---------- Teste de conexão ----------
+  async function runNetTest(box, st) {
+    box.innerHTML = `<div class="nt-run"><div class="spinner-sm"></div><span id="nt-step">Iniciando…</span></div>`;
+    const r = await GNetTest.run(st, (t) => { const s = box.querySelector('#nt-step'); if (s) s.textContent = t; });
+    const okI = (ok) => ok ? `<span class="nt-ok">${icon('check')}</span>` : `<span class="nt-warn">${icon('info')}</span>`;
+    const hwList = Object.keys(r.hw).filter(k => r.hw[k]);
+    const natTxt = { aberta: 'Aberta — conexão direta entre computadores (ideal, menor atraso).', restrita: 'Restrita — algumas redes podem exigir retransmissão (TURN) para conectar.', bloqueada: 'Bloqueada — não foi possível sair pela rede; verifique firewall/proxy.' }[r.nat];
+    const resLabel = r.rec.resolution === 'auto' ? 'nativa' : r.rec.resolution.replace('x', ' × ');
+    box.innerHTML = `
+      <div class="nt-grid">
+        <div>${okI(r.server.ok)}<b>Servidor de conexão</b><small>${r.server.ok ? `Respondeu em ${r.server.ms} ms` : `Sem resposta (${esc(r.server.error)})`}</small></div>
+        <div>${okI(r.nat === 'aberta')}<b>Tipo de rede</b><small>${esc(natTxt)}${r.turn === true ? ' Retransmissão TURN funcionando.' : r.turn === false ? ' A retransmissão TURN configurada não respondeu.' : ''}</small></div>
+        <div>${okI(hwList.length > 0)}<b>Aceleração de vídeo</b><small>${hwList.length ? 'Codificação por hardware: ' + hwList.join(', ') : 'Sem codificação por hardware — usa o processador (VP8, mais leve).'}</small></div>
+        <div>${okI(true)}<b>Este computador</b><small>${r.cores} núcleos · tela ${r.screen.w} × ${r.screen.h}</small></div>
+      </div>
+      <div class="nt-rec"><b>Recomendado:</b> perfil Velocidade · ${r.rec.fps} quadros/s · resolução ${resLabel} · qualidade ${({ high: 'alta', medium: 'equilibrada', low: 'baixa' })[r.rec.quality]} · ponteiro em ponto · codificação automática</div>
+      ${r.nat === 'restrita' && !(st.turn && st.turn.urls) ? '<p class="muted">Dica: se a conexão falhar em redes muito fechadas (internet móvel, empresas), configure um servidor TURN abaixo.</p>' : ''}
+      <div class="upd-actions"><button class="btn primary" id="nt-apply">${icon('check')}Aplicar recomendações</button><button class="btn ghost" id="nt-again">${icon('refresh')}Testar de novo</button></div>`;
+    box.querySelector('#nt-again').onclick = () => runNetTest(box, st);
+    box.querySelector('#nt-apply').onclick = async () => { await gcp.invoke('settings:set', 'session', r.rec); toast('Configurações recomendadas aplicadas.', 'ok'); };
+  }
+
+  root.GSettings = { renderSettings, renderEffects, SHORTCUT_LABELS, installUpdate };
 })(window);

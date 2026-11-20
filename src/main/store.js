@@ -67,7 +67,10 @@ const DEFAULTS = {
     fps: 30,
     quality: 'high',              // low | medium | high | max
     syncClipboard: true,
-    showRemoteCursor: true
+    showRemoteCursor: true,
+    profile: 'speed',             // speed | balanced | quality
+    codec: 'auto',                // auto | h264 | vp8 | vp9 | av1
+    pointer: 'dot'                // dot | arrow | none
   },
   shortcuts: { ...DEFAULT_SHORTCUTS },
   effects: {
@@ -75,7 +78,7 @@ const DEFAULTS = {
     clicks: { on: true, left: '#4fc3f7', right: '#ff9800', size: 39 },
     spotlight: { on: false, radius: 170, dim: 62 },
     widget: { on: false, expanded: false, x: null, y: null },
-    showDuringSession: true,     // mostra efeitos automaticamente quando há sessão remota
+    showDuringSession: false,     // mostra efeitos automaticamente quando há sessão remota
     sessionBanner: true          // aviso discreto "sessão remota ativa" na tela acessada
   },
   general: {
@@ -83,6 +86,8 @@ const DEFAULTS = {
     startMinimized: false,
     closeToTray: true,
     compatX11: false,
+    updateCheck: 'startup',       // startup | daily | weekly | biweekly | monthly | never
+    lastUpdateCheck: null,
     theme: 'system',
     downloadDir: ''
   },
@@ -114,6 +119,7 @@ class Store {
     if (!this.data.security.permanentSalt) this.data.security.permanentSalt = crypto.randomBytes(16).toString('hex');
     if (!this.data.displayName) this.data.displayName = require('os').hostname();
     this.migrateShortcuts();
+    this.migrateV3();
     this.save();
   }
 
@@ -127,6 +133,16 @@ class Store {
       if (!(k in sc) || sc[k] === OLD[k]) sc[k] = DEFAULT_SHORTCUTS[k];
     }
     this.data.shortcutsVersion = 2;
+  }
+
+  // Versão 3: destaque do cursor desligado nas sessões (evita ponteiro duplicado) e perfil de velocidade.
+  migrateV3() {
+    if (this.data.prefsVersion >= 3) return;
+    this.data.effects.showDuringSession = false;
+    this.data.session.profile = this.data.session.profile || 'speed';
+    this.data.session.pointer = this.data.session.pointer || 'dot';
+    this.data.session.codec = this.data.session.codec || 'auto';
+    this.data.prefsVersion = 3;
   }
 
   static newDeviceId() {

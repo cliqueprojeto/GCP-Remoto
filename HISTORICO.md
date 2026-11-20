@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 1.1.0
+
+- Desempenho quase em tempo real: exibição sem buffer de espera (jitter buffer zero), codificação de vídeo por hardware (H.264) quando disponível, perfil "Velocidade" que preserva a fluidez quando a rede aperta e transmissão que já começa em resolução cheia.
+- Mouse mais rápido e preciso: canal próprio sem fila de reenvio, até 120 atualizações por segundo, e ponteiro local em forma de ponto, que marca exatamente onde o clique cai sem duplicar a seta do outro computador.
+- Destaque amarelo do cursor desligado por padrão durante as sessões (pode ser ligado em Apresentação).
+- Teste de conexão em Configurações › Conexão: servidor, tipo de rede, aceleração de vídeo e botão "Aplicar recomendações".
+- Atualizações pelo GitHub em Configurações › Geral: frequência da verificação, "Verificar agora" e instalação adaptada a cada sistema, com conferência SHA-256.
+- Barra da sessão mostra a codificação em uso (por exemplo, H264 HW).
+
 ## 1.0.2
 
 - Instalador do Windows em um clique: instala sem perguntas e abre o programa.

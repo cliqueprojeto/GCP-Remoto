@@ -1,12 +1,12 @@
 # GCP-Remoto
 
-## Novidades 1.0.2
+## Novidades 1.1.0
 
-- **Instalar com dois cliques, sem terminal:** o instalador do Windows instala e já abre o programa; no Linux, o AppImage se instala sozinho no menu de aplicativos (Internet) ao ser aberto.
-- **Janelas no modo nativo do sistema** (Wayland ou X11), com modo de compatibilidade X11 opcional em Configurações › Geral.
-- **Registro de diagnóstico** em Configurações › Sobre, e a janela se recupera sozinha se algo falhar.
+- **Quase em tempo real:** vídeo sem buffer de espera, codificação pela placa de vídeo quando disponível e perfil "Velocidade", que mantém o movimento fluido mesmo com internet fraca.
+- **Mouse preciso, sem ponteiro duplicado:** canal próprio para os movimentos e ponteiro local em forma de ponto, exatamente onde o clique vai cair.
+- **Teste de conexão** com recomendações automáticas e **atualizações pelo GitHub** direto nas Configurações, em todos os sistemas.
 
-Na versão 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
+Na versão 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
 
 **Acesso remoto gratuito, livre e completo, com interface em português.**
 
@@ -81,6 +81,17 @@ O AppImage requer FUSE 2, já presente na maioria das distribuições.
 - Modo **somente visualização**.
 - Área de transferência de texto sincronizada nos dois sentidos e **chat** integrado.
 - Captura de tela da sessão, salva em Imagens › GCP Remoto.
+
+### Desempenho
+- Transmissão em tempo real por WebRTC, com exibição imediata de cada quadro (sem buffer de espera).
+- Codificação de vídeo pela placa de vídeo (H.264) quando disponível; senão VP8, o mais leve no processador.
+- Perfis: **Velocidade** (fluidez em primeiro lugar, como TeamViewer), **Equilibrado** e **Qualidade de imagem**.
+- Movimentos do mouse por um canal próprio, sem fila de reenvio, até 120 vezes por segundo.
+- **Teste de conexão** (Configurações › Conexão): mede o servidor, o tipo de rede e a aceleração de vídeo e aplica as configurações recomendadas.
+
+### Atualizações
+- Em **Configurações › Geral › Atualizações**: verificar sempre que abrir, todos os dias, por semana, a cada duas semanas, por mês ou nunca, além de **Verificar agora**.
+- A instalação se adapta ao sistema: no Windows, o instalador roda em silêncio e reabre o programa; no AppImage, a cópia instalada é substituída; nos pacotes do Linux, o instalador do sistema (Pamac, Discover) é aberto. Cada arquivo é conferido pela assinatura SHA-256 publicada na versão.
 
 ### Exibição
 - Ajustar à janela, **tamanho original (1:1)** com rolagem, ou esticar.

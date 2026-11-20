@@ -154,5 +154,42 @@
     }
   }
 
-  root.GProto = { PEER_PREFIX, PROTO_VERSION, sha256hex, makeProof, peerOptions, fmtBytes, formatId, osName, Transfers };
+  // Descobre quais codecs o computador codifica por hardware (placa de vídeo)
+  async function hardwareCodecs() {
+    if (GProto.cachedHw) return GProto.cachedHw;
+    const out = {};
+    if (!navigator.mediaCapabilities) return out;
+    const tests = { H264: 'video/H264', VP9: 'video/VP9', AV1: 'video/AV1', VP8: 'video/VP8' };
+    for (const [k, ct] of Object.entries(tests)) {
+      try {
+        const r = await navigator.mediaCapabilities.encodingInfo({ type: 'webrtc', video: { contentType: ct, width: 1920, height: 1080, bitrate: 6000000, framerate: 30 } });
+        out[k] = !!(r.supported && r.powerEfficient);
+      } catch (_) { out[k] = false; }
+    }
+    GProto.cachedHw = out;
+    return out;
+  }
+
+  // Começa a transmissão já com banda alta e define um piso, para a imagem nascer nítida
+  // (o padrão do WebRTC começa em ~300 kb/s e demora segundos para subir).
+  function tuneSdp(sdp, { start = 2500, min = 800, max = 20000 } = {}) {
+    const lines = sdp.split('\r\n');
+    const out = [];
+    let inVideo = false;
+    const pts = new Set();
+    for (const l of lines) { if (l.startsWith('m=')) inVideo = l.startsWith('m=video'); if (inVideo) { const m = l.match(/^a=rtpmap:(\d+) (H264|VP8|VP9|AV1)\//i); if (m) pts.add(m[1]); } }
+    const params = `x-google-start-bitrate=${start};x-google-min-bitrate=${min};x-google-max-bitrate=${max}`;
+    const withFmtp = new Set();
+    for (const l of lines) { const m = l.match(/^a=fmtp:(\d+) /); if (m && pts.has(m[1])) withFmtp.add(m[1]); }
+    for (const l of lines) {
+      const f = l.match(/^a=fmtp:(\d+) (.*)$/);
+      if (f && pts.has(f[1]) && !/x-google-start-bitrate/.test(l)) { out.push(l + ';' + params); continue; }
+      out.push(l);
+      const r = l.match(/^a=rtpmap:(\d+) /);
+      if (r && pts.has(r[1]) && !withFmtp.has(r[1])) out.push(`a=fmtp:${r[1]} ${params}`);
+    }
+    return out.join('\r\n');
+  }
+
+  root.GProto = { PEER_PREFIX, PROTO_VERSION, sha256hex, makeProof, peerOptions, fmtBytes, formatId, osName, Transfers, hardwareCodecs, tuneSdp, cachedHw: null };
 })(window);

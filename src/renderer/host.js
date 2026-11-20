@@ -15,6 +15,7 @@
     async start() {
       this.info = await gcp.invoke('app:info');
       this.settings = await gcp.invoke('settings:get');
+      GProto.hardwareCodecs().catch(() => {});
       this.connectPeer();
       window.addEventListener('online', () => { if (!this.peer || this.peer.disconnected) this.reconnect(0); });
     },
@@ -53,6 +54,21 @@
 
     // ---------- Conexões recebidas ----------
     onConnection(conn) {
+      if (conn.label === 'input') {
+        // Canal rápido do mouse: sem ordem garantida; movimentos antigos são descartados pelo número de sequência
+        conn.on('open', () => {
+          const s = this.session;
+          if (!s || !conn.metadata || conn.metadata.token !== s.token || conn.peer !== s.conn.peer) { conn.close(); return; }
+          s.inputConn = conn; s.lastSeq = 0;
+          conn.on('data', (m) => {
+            if (!m || m.t !== 'mm' || this.session !== s) return;
+            if (m.q <= s.lastSeq) return;
+            s.lastSeq = m.q;
+            this.onSessionMessage(m);
+          });
+        });
+        return;
+      }
       if (conn.label === 'files') {
         conn.on('open', () => {
           const s = this.session;
@@ -154,7 +170,9 @@
         screen: s.screen && s.screen.id, os: this.info.platform, osLabel: this.info.osLabel, name: this.settings.displayName,
         effects: await gcp.invoke('effects:get'), wayland: this.info.wayland
       });
-      s.call = this.peer.call(conn.peer, s.stream, { metadata: { token } });
+      const maxKbps = Math.round((QUALITY_BITRATE[s.quality.quality] || QUALITY_BITRATE.high) / 1000);
+      s.call = this.peer.call(conn.peer, s.stream, { metadata: { token }, sdpTransform: (sdp) => GProto.tuneSdp(sdp, { start: Math.min(4000, maxKbps), min: Math.min(800, maxKbps), max: maxKbps }) });
+      this.preferCodec(s);
       s.call.on('close', () => { if (this.session === s) this.end('Transmissão encerrada.'); });
       s.call.on('error', () => {});
       this.watchCall(s);
@@ -191,8 +209,38 @@
         }
       }
       const vt = stream.getVideoTracks()[0];
-      if (vt) vt.contentHint = q.quality === 'low' ? 'motion' : 'detail';
+      // Perfil "velocidade": mantém a fluidez e reduz a nitidez quando a rede aperta (como TeamViewer/AnyDesk)
+      if (vt) vt.contentHint = (q.profile || 'speed') === 'quality' ? 'detail' : 'motion';
       return stream;
+    },
+
+    // Codificação por hardware quando disponível (H.264), senão VP8 (o mais leve em software).
+    preferCodec(s) {
+      const pc = s.call && s.call.peerConnection;
+      if (!pc || !window.RTCRtpSender || !RTCRtpSender.getCapabilities) return;
+      const pick = async () => {
+        const caps = RTCRtpSender.getCapabilities('video');
+        if (!caps) return;
+        const want = (s.quality.codec || 'auto');
+        let order = ['H264', 'VP8', 'VP9', 'AV1'];
+        if (want === 'auto') {
+          const hw = await GProto.hardwareCodecs().catch(() => ({}));
+          order = hw.H264 ? ['H264', 'VP8', 'VP9', 'AV1'] : hw.VP9 ? ['VP9', 'VP8', 'H264', 'AV1'] : ['VP8', 'H264', 'VP9', 'AV1'];
+        } else order = [want.toUpperCase(), ...order.filter(c => c !== want.toUpperCase())];
+        const rank = (c) => { const n = c.mimeType.split('/')[1].toUpperCase(); const i = order.indexOf(n); return i < 0 ? 99 : i; };
+        const codecs = caps.codecs.slice().sort((a, b) => rank(a) - rank(b));
+        for (const t of pc.getTransceivers()) {
+          if (t.sender && t.sender.track && t.sender.track.kind === 'video' && t.setCodecPreferences) { try { t.setCodecPreferences(codecs); } catch (_) {} }
+        }
+      };
+      // precisa acontecer antes da oferta: o PeerJS negocia logo em seguida (evento negotiationneeded)
+      try {
+        const caps = RTCRtpSender.getCapabilities('video');
+        const order = s.quality.codec && s.quality.codec !== 'auto' ? [s.quality.codec.toUpperCase()] : (GProto.cachedHw && GProto.cachedHw.H264 ? ['H264'] : GProto.cachedHw && GProto.cachedHw.VP9 ? ['VP9'] : ['VP8']);
+        const rank = (c) => (order.includes(c.mimeType.split('/')[1].toUpperCase()) ? 0 : 1);
+        const codecs = caps.codecs.slice().sort((a, b) => rank(a) - rank(b));
+        for (const t of pc.getTransceivers()) if (t.sender && t.sender.track && t.sender.track.kind === 'video' && t.setCodecPreferences) t.setCodecPreferences(codecs);
+      } catch (_) { pick(); }
     },
 
     watchCall(s) {
@@ -214,7 +262,10 @@
         if (!p.encodings || !p.encodings.length) p.encodings = [{}];
         p.encodings[0].maxBitrate = QUALITY_BITRATE[s.quality.quality] || QUALITY_BITRATE.high;
         p.encodings[0].maxFramerate = Number(s.quality.fps) || 30;
-        p.degradationPreference = s.quality.quality === 'low' ? 'maintain-framerate' : 'maintain-resolution';
+        const prof = s.quality.profile || 'speed';
+        p.degradationPreference = prof === 'quality' ? 'maintain-resolution' : prof === 'balanced' ? 'balanced' : 'maintain-framerate';
+        p.encodings[0].priority = 'high';
+        p.encodings[0].networkPriority = 'high';
         try { await sender.setParameters(p); } catch (_) {}
       }
     },
@@ -254,6 +305,7 @@
           break;
         case 'quality':
           s.quality = { ...s.quality, ...m.q };
+          if (m.q.profile) { const vt = s.stream && s.stream.getVideoTracks()[0]; if (vt) vt.contentHint = m.q.profile === 'quality' ? 'detail' : 'motion'; }
           if (m.q.resolution !== undefined || m.q.fps !== undefined) this.replaceStream(s).catch(() => {});
           else this.applyBitrate(s);
           break;
@@ -327,6 +379,7 @@
       try { s.conn.send({ t: 'bye', reason: 'Sessão encerrada pelo computador acessado.' }); } catch (_) {}
       setTimeout(() => { try { s.conn.close(); } catch (_) {} try { s.filesConn && s.filesConn.close(); } catch (_) {} }, 300);
       try { s.call && s.call.close(); } catch (_) {}
+      try { s.inputConn && s.inputConn.close(); } catch (_) {}
       s.stream && s.stream.getTracks().forEach(t => t.stop());
       gcp.invoke('input:release');
       gcp.invoke('overlay:session', null);

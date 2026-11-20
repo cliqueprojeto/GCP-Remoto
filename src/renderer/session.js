@@ -70,8 +70,9 @@
     peer.on('call', (call) => {
       if (!S.token || !call.metadata || call.metadata.token !== S.token) { call.close(); return; }
       S.call = call;
-      call.answer();
+      call.answer(undefined, { sdpTransform: (sdp) => GProto.tuneSdp(sdp, { start: 3000, min: 800, max: 20000 }) });
       call.on('stream', (stream) => {
+        lowLatency(call);
         video.srcObject = stream;
         video.muted = false;
         video.play().catch(() => { video.muted = true; video.play(); });
@@ -99,6 +100,16 @@
     const sec = Math.floor((Date.now() - (S.since || Date.now())) / 1000);
     const dur = `${String(Math.floor(sec / 3600)).padStart(2, '0')}:${String(Math.floor(sec / 60) % 60).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
     gcp.invoke('notice:info', { tone: 'warn', title: 'Sessão desconectada', body, meta: [`${S.hello ? S.hello.name : S.params.name} · ${formatId(S.params.id)}`, `duração ${dur}`], ms: 9000 });
+  }
+
+  // Exibe cada quadro assim que chega: sem buffer de espera (jitter buffer = 0)
+  function lowLatency(call) {
+    const pc = call && call.peerConnection; if (!pc) return;
+    const apply = () => pc.getReceivers().forEach(r => {
+      try { if ('jitterBufferTarget' in r) r.jitterBufferTarget = 0; } catch (_) {}
+      try { if ('playoutDelayHint' in r) r.playoutDelayHint = 0; } catch (_) {}
+    });
+    apply(); setTimeout(apply, 1000); setTimeout(apply, 4000);
   }
 
   function fail(title, text) {
@@ -182,6 +193,9 @@
       toast('Salvo nos favoritos — da próxima vez é só um clique.', 'ok');
     }
     S.filesConn = S.peer.connect(PEER_PREFIX + S.params.id, { label: 'files', reliable: true, serialization: 'binary', metadata: { token: S.token } });
+    // canal rápido para o mouse: sem ordem garantida (movimentos antigos não seguram os novos)
+    S.inputConn = S.peer.connect(PEER_PREFIX + S.params.id, { label: 'input', reliable: false, serialization: 'json', metadata: { token: S.token } });
+    S.moveSeq = 0;
     S.filesConn.on('data', (msg) => transfers.handle(msg));
     buildScreensMenu(); buildFxMenu(); buildQualityMenu();
     updateModeUI();
@@ -245,13 +259,23 @@
   const canControl = () => S.connected && S.mode === 'control' && !S.viewOnly && S.remotePerms.control !== false;
 
   // ---------- Mouse ----------
-  let pendingMove = null, moveRaf = 0;
+  // Movimentos do mouse: no máximo a cada 8 ms (≈120 por segundo), sempre a posição mais recente
+  let pendingMove = null, moveTimer = 0, lastMoveAt = 0;
   const BTN = ['left', 'middle', 'right'];
+  function flushMove() {
+    moveTimer = 0;
+    if (!pendingMove) return;
+    const m = { t: 'mm', x: +pendingMove.x.toFixed(5), y: +pendingMove.y.toFixed(5) };
+    pendingMove = null; lastMoveAt = performance.now();
+    if (S.inputConn && S.inputConn.open) S.inputConn.send({ ...m, q: ++S.moveSeq });
+    else send(m);
+  }
   ink.addEventListener('pointermove', (e) => {
     if (S.mode === 'draw') return drawMove(e);
     if (!canControl()) return;
     pendingMove = norm(e);
-    if (!moveRaf) moveRaf = requestAnimationFrame(() => { moveRaf = 0; if (pendingMove) send({ t: 'mm', ...pendingMove }); pendingMove = null; });
+    const wait = 8 - (performance.now() - lastMoveAt);
+    if (wait <= 0) flushMove(); else if (!moveTimer) moveTimer = setTimeout(flushMove, wait);
   });
   ink.addEventListener('pointerdown', (e) => {
     ink.focus();
@@ -487,7 +511,8 @@
     $('#drawbar').classList.toggle('hidden', S.mode !== 'draw');
     stage.classList.toggle('draw', S.mode === 'draw');
     stage.classList.toggle('control', S.mode === 'control' && canControl());
-    stage.classList.add('show-cursor');
+    stage.classList.remove('ptr-dot', 'ptr-arrow', 'ptr-none');
+    stage.classList.add('ptr-' + ((S.settings && S.settings.session.pointer) || 'dot'));
     stage.classList.toggle('viewonly', S.mode === 'control' && !canControl());
   }
   $('#b-control').onclick = () => { if (S.mode === 'draw') setMode('control'); else { S.viewOnly = !S.viewOnly; updateModeUI(); } };
@@ -593,13 +618,17 @@
     const q = S.settings.session;
     const m = $('#m-quality');
     const res = [['auto', 'Automática (nativa)'], ['2560x1440', '2560 × 1440'], ['1920x1080', '1920 × 1080'], ['1600x900', '1600 × 900'], ['1366x768', '1366 × 768'], ['1280x720', '1280 × 720'], ['1024x576', '1024 × 576']];
-    m.innerHTML = `<h4>Qualidade</h4>
+    S.q = S.q || { quality: q.quality, resolution: q.resolution, fps: q.fps, profile: q.profile || 'speed' };
+    m.innerHTML = `<h4>Perfil</h4>
+      ${[['speed', 'Velocidade — quase em tempo real'], ['balanced', 'Equilibrado'], ['quality', 'Qualidade de imagem']].map(([v, l]) => mi(l, `data-p="${v}"`, { sel: (S.q.profile || 'speed') === v })).join('')}
+      <div class="mdiv"></div><h4>Qualidade</h4>
       ${[['low', 'Baixa — internet lenta'], ['medium', 'Equilibrada'], ['high', 'Alta'], ['max', 'Máxima — rede local']].map(([v, l]) => mi(l, `data-q="${v}"`, { sel: S.q ? S.q.quality === v : q.quality === v })).join('')}
       <div class="mdiv"></div><h4>Resolução transmitida</h4>
       ${res.map(([v, l]) => mi(l, `data-r="${v}"`, { sel: (S.q ? S.q.resolution : q.resolution) === v })).join('')}
       <div class="mdiv"></div><h4>Fluidez</h4>
       ${[15, 30, 60].map(f => mi(`${f} quadros/s`, `data-f="${f}"`, { sel: Number(S.q ? S.q.fps : q.fps) === f })).join('')}`;
     S.q = S.q || { quality: q.quality, resolution: q.resolution, fps: q.fps };
+    $$('[data-p]', m).forEach(b => b.onclick = () => { S.q.profile = b.dataset.p; send({ t: 'quality', q: { profile: S.q.profile } }); buildQualityMenu(); });
     $$('[data-q]', m).forEach(b => b.onclick = () => { S.q.quality = b.dataset.q; send({ t: 'quality', q: { quality: S.q.quality } }); buildQualityMenu(); });
     $$('[data-r]', m).forEach(b => b.onclick = () => { S.q.resolution = b.dataset.r; send({ t: 'quality', q: { resolution: S.q.resolution } }); buildQualityMenu(); });
     $$('[data-f]', m).forEach(b => b.onclick = () => { S.q.fps = Number(b.dataset.f); send({ t: 'quality', q: { fps: S.q.fps } }); buildQualityMenu(); });
@@ -643,10 +672,12 @@
       send({ t: 'ping', ts: performance.now() });
       const pc = S.call && S.call.peerConnection; if (!pc) return;
       const stats = await pc.getStats();
-      let fps = 0, w = 0, h = 0, kbps = 0, relay = false;
+      let fps = 0, w = 0, h = 0, kbps = 0, relay = false, codec = '', hwDec = '';
       stats.forEach(r => {
         if (r.type === 'inbound-rtp' && r.kind === 'video') {
           fps = Math.round(r.framesPerSecond || 0); w = r.frameWidth; h = r.frameHeight;
+          const c = r.codecId && stats.get(r.codecId); if (c) codec = c.mimeType.split('/')[1];
+          if (r.decoderImplementation) hwDec = /External|D3D|VAAPI|VideoToolbox|Media ?Foundation|V4L2/i.test(r.decoderImplementation) ? ' HW' : '';
           if (lastTs) kbps = Math.round(((r.bytesReceived - lastBytes) * 8) / (r.timestamp - lastTs));
           lastBytes = r.bytesReceived; lastTs = r.timestamp;
         }
@@ -654,7 +685,7 @@
           const lc = stats.get(r.localCandidateId); if (lc && lc.candidateType === 'relay') relay = true;
         }
       });
-      $('#stat').textContent = `${S.rtt != null ? S.rtt + ' ms · ' : ''}${w ? `${w}×${h} · ` : ''}${fps} fps · ${kbps > 1000 ? (kbps / 1000).toFixed(1) + ' Mb/s' : kbps + ' kb/s'}${relay ? ' · relé' : ''}`;
+      $('#stat').textContent = `${S.rtt != null ? S.rtt + ' ms · ' : ''}${w ? `${w}×${h} · ` : ''}${fps} fps · ${kbps > 1000 ? (kbps / 1000).toFixed(1) + ' Mb/s' : kbps + ' kb/s'}${codec ? ' · ' + codec + hwDec : ''}${relay ? ' · relé' : ''}`;
       $('#st-dot').className = 'status-dot ' + (S.rtt == null || S.rtt < 150 ? 'ok' : S.rtt < 400 ? '' : 'err');
     }, 2000);
   }

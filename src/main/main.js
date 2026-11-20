@@ -13,6 +13,7 @@ const { OverlayManager } = require('./overlay');
 const files = require('./files');
 const { NoticeManager } = require('./notices');
 const { integrateAppImage, installedPath } = require('./linux-integration');
+const updater = require('./updater');
 
 // Apoio ao projeto (voluntário)
 const SUPPORT = {
@@ -55,6 +56,7 @@ const ICON = path.join(__dirname, '..', '..', 'build', 'icon.png');
 const startHidden = process.argv.includes('--hidden');
 
 let store, input, overlay, notices, tray, mainWin = null;
+let lastUpdate = null;
 let quitting = false;
 let sessionPassword = '';
 let pendingSourceId = null;
@@ -461,6 +463,23 @@ function registerIpc() {
     const svg = await QR.toString(SUPPORT.pix, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } });
     return { ...SUPPORT, qr: 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64') };
   });
+  // ---- Atualizações pelo GitHub ----
+  h('update:check', async () => {
+    const st = await updater.check();
+    store.data.general.lastUpdateCheck = Date.now(); store.save();
+    lastUpdate = st; return { ...st, checkedAt: store.data.general.lastUpdateCheck };
+  });
+  h('update:info', () => ({ current: app.getVersion(), kind: updater.installKind(), lastCheck: store.get('general').lastUpdateCheck || null, freq: store.get('general').updateCheck || 'startup', pending: lastUpdate && lastUpdate.newer ? lastUpdate : null }));
+  h('update:install', async (e) => {
+    const st = lastUpdate && lastUpdate.newer ? lastUpdate : await updater.check();
+    if (!st.newer) return { action: 'none', message: 'Você já está na versão mais recente.' };
+    return updater.install(st, {
+      appImageTarget: installedPath(),
+      onProgress: (done, total) => { if (!e.sender.isDestroyed()) e.sender.send('update:progress', done, total); },
+      relaunch: (target) => { quitting = true; app.relaunch({ execPath: target, args: [] }); setTimeout(() => app.exit(0), 300); }
+    });
+  });
+  h('update:page', () => shell.openExternal('https://github.com/cliqueprojeto/GCP-Remoto/releases/latest'));
   h('notice:request', (_e, payload) => notices.request(payload));
   h('notice:info', (_e, payload) => { notices.info(payload); return true; });
   h('tray:status', (_e, text) => { if (tray) tray.setToolTip(`GCP Remoto — ${text}`); });
@@ -495,6 +514,15 @@ app.whenReady().then(() => {
   createMainWindow();
   syncGlobalShortcuts();
   watchForUpdate();
+  setTimeout(async () => {
+    if (!app.isPackaged || !updater.isDue(store.get('general'))) return;
+    try {
+      lastUpdate = await updater.check();
+      store.data.general.lastUpdateCheck = Date.now(); store.save();
+      if (lastUpdate.newer && mainWin) mainWin.webContents.send('update:available', lastUpdate);
+      if (lastUpdate.newer && notices) notices.info({ tone: 'ok', icon: 'download', title: `Nova versão ${lastUpdate.latest} disponível`, body: 'Abra o GCP-Remoto e clique em Atualizar agora.', ms: 10000 });
+    } catch (e) { logLine('[atualização]', e.message); }
+  }, 15000);
   const integ = integrateAppImage();
   if (integ) setTimeout(() => notices.info({ tone: 'ok', icon: 'check', title: integ === 'installed' ? 'GCP-Remoto instalado' : 'GCP-Remoto atualizado', body: integ === 'installed' ? 'Ele já está no menu de aplicativos, em Internet. Pode apagar o arquivo baixado.' : `Versão ${app.getVersion()} instalada no menu de aplicativos.`, ms: 9000 }), 2500);
   applyAutostart(!!store.get('general').startWithSystem);

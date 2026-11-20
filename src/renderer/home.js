@@ -60,6 +60,11 @@
   $('#btn-open-downloads').onclick = () => gcp.invoke('file:open-downloads');
   $('#btn-support').onclick = () => GSupport.open();
   gcp.on('support:open', () => GSupport.open());
+  const showUpdate = (u) => { if (!u || !u.newer) return; $('#update-text').textContent = `Nova versão ${u.latest} do GCP-Remoto disponível.`; $('#update-banner').classList.remove('hidden'); };
+  gcp.on('update:available', showUpdate);
+  gcp.invoke('update:info').then(u => showUpdate(u.pending));
+  $('#update-close').onclick = () => $('#update-banner').classList.add('hidden');
+  $('#update-go').onclick = () => { $('#update-text').textContent = 'Preparando a atualização…'; GSettings.installUpdate($('#update-text')); };
 
   // ---------- Conectar ----------
   const idInput = $('#remote-id');

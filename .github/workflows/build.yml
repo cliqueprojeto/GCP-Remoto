@@ -58,6 +58,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run dist:linux
+      - name: Assinaturas SHA-256
+        run: cd dist && sha256sum *.deb *.rpm *.pkg.tar.zst *.AppImage > SHA256SUMS-linux.txt && cat SHA256SUMS-linux.txt
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
@@ -67,6 +69,7 @@ jobs:
             dist/*.rpm
             dist/*.pkg.tar.zst
             dist/*.AppImage
+            dist/SHA256SUMS-linux.txt
 
   windows:
     name: Windows (instalador, portátil e zip)
@@ -82,6 +85,11 @@ jobs:
       - run: npm test
       - name: Compilar
         run: npx electron-builder --win nsis portable zip --x64 --config.win.signAndEditExecutable=true
+      - name: Assinaturas SHA-256
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -File | Where-Object { $_.Name -match '\.(exe|zip)$' } | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } | Set-Content -Encoding ascii dist/SHA256SUMS-windows.txt
+          Get-Content dist/SHA256SUMS-windows.txt
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
@@ -89,3 +97,4 @@ jobs:
           files: |
             dist/*.exe
             dist/*.zip
+            dist/SHA256SUMS-windows.txt

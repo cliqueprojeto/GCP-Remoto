@@ -8,7 +8,7 @@ const path = require('path');
 const { MAP, libnutName, evdevCode, charToKeysym } = require('../src/main/keymap');
 
 function loadRenderer(file, extra = {}) {
-  const win = { crypto: globalThis.crypto, TextEncoder, performance, ...extra };
+  const win = { crypto: globalThis.crypto, TextEncoder, TextDecoder, performance, ...extra };
   win.window = win;
   vm.createContext(win);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'lib', file), 'utf8'), win);
@@ -62,4 +62,13 @@ test('quadro de desenho aplica, acrescenta, remove e limpa formas', () => {
   assert.strictEqual(JSON.stringify(b.shapes.map(s => s.id)), '["y"]');
   b.apply({ a: 'remove', id: 'y' });
   assert.strictEqual(b.shapes.length, 0);
+});
+
+test('ajuste de banda inicial só altera o vídeo e cobre codecs sem fmtp', () => {
+  const w = loadRenderer('proto.js', { GDraw: {} });
+  const sdp = ['v=0', 'm=audio 9 UDP 111', 'a=rtpmap:111 opus/48000/2', 'a=fmtp:111 minptime=10', 'm=video 9 UDP 96 102', 'a=rtpmap:96 VP8/90000', 'a=rtpmap:102 H264/90000', 'a=fmtp:102 profile-level-id=42e01f', ''].join('\r\n');
+  const out = w.GProto.tuneSdp(sdp, { start: 2500, min: 800, max: 8000 });
+  assert.match(out, /a=fmtp:96 x-google-start-bitrate=2500;x-google-min-bitrate=800;x-google-max-bitrate=8000/);
+  assert.match(out, /a=fmtp:102 profile-level-id=42e01f;x-google-start-bitrate=2500/);
+  assert.match(out, /a=fmtp:111 minptime=10\r\n/);
 });

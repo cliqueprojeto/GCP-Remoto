@@ -5,17 +5,20 @@ body { background: #070b14; }
 
 /* ---------- Barra ---------- */
 .bar { display: flex; align-items: center; gap: 14px; height: 54px; padding: 0 12px 0 16px; background: rgba(15, 23, 41, .96); border-bottom: 1px solid var(--border); z-index: 30; transition: transform .2s, opacity .2s; }
-.who { display: flex; align-items: center; gap: 10px; min-width: 0; width: 240px; }
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 0 1 240px; }
 .who-text { min-width: 0; }
 .who-text b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .who-text small { display: block; color: var(--muted); font-size: 11.5px; font-family: var(--mono); white-space: nowrap; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 4px rgba(255, 181, 71, .2); flex: none; }
 .status-dot.ok { background: var(--ok); box-shadow: 0 0 0 4px rgba(61, 220, 151, .18); }
 .status-dot.err { background: var(--danger); box-shadow: 0 0 0 4px rgba(255, 93, 93, .2); }
-.tools { flex: 1; display: flex; justify-content: center; gap: 10px; }
+.tools { flex: 1 1 auto; display: flex; justify-content: center; gap: 10px; min-width: 0; }
 .grp { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--border); }
-.right { display: flex; align-items: center; gap: 12px; justify-content: flex-end; width: 300px; }
-.stat { color: var(--muted); font: 600 11.5px var(--mono); white-space: nowrap; }
+.right { display: flex; align-items: center; gap: 12px; justify-content: flex-end; flex: 0 1 auto; min-width: 0; }
+.stat { color: var(--muted); font: 600 11.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 290px; min-width: 0; }
+@media (max-width: 1240px) { .stat { max-width: 150px; } }
+@media (max-width: 1060px) { .stat { display: none; } .who { flex-basis: 170px; } }
+@media (max-width: 860px) { .who-text small { display: none; } .grp { gap: 0; } .bar { gap: 8px; } #b-close { padding: 0 10px; } }
 .icon-btn { position: relative; }
 .badge { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
 

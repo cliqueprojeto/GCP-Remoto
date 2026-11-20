@@ -686,7 +686,8 @@
           const lc = stats.get(r.localCandidateId); if (lc && lc.candidateType === 'relay') relay = true;
         }
       });
-      $('#stat').textContent = `${S.rtt != null ? S.rtt + ' ms · ' : ''}${w ? `${w}×${h} · ` : ''}${fps} fps · ${kbps > 1000 ? (kbps / 1000).toFixed(1) + ' Mb/s' : kbps + ' kb/s'}${codec ? ' · ' + codec + hwDec : ''}${relay ? ' · relé' : ''}`;
+      const statTxt = `${S.rtt != null ? S.rtt + ' ms · ' : ''}${w ? `${w}×${h} · ` : ''}${fps} fps · ${kbps > 1000 ? (kbps / 1000).toFixed(1) + ' Mb/s' : kbps + ' kb/s'}${codec ? ' · ' + codec + hwDec : ''}${relay ? ' · relé' : ''}`;
+      $('#stat').textContent = statTxt; $('#stat').title = statTxt; $('#st-dot').title = statTxt;
       $('#st-dot').className = 'status-dot ' + (S.rtt == null || S.rtt < 150 ? 'ok' : S.rtt < 400 ? '' : 'err');
     }, 2000);
   }

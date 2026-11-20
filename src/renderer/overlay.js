@@ -11,6 +11,8 @@
   let cursor = { x: -999, y: -999 };
   let rings = [];
   let dirty = true;
+  let fading = false;
+  window.__estado = () => ({ effects: state.effects, formas: board.shapes.length, fading });  // diagnóstico
   const mine = [], redo = [];
 
   function resize() {
@@ -28,7 +30,7 @@
   }
 
   function frame() {
-    if (dirty || rings.length) {
+    if (dirty || rings.length || fading) {
       dirty = false;
       const fx = state.effects, on = fxActive();
       const dpr = window.devicePixelRatio || 1;
@@ -47,7 +49,10 @@
         ctx.beginPath(); ctx.arc(cursor.x, cursor.y, fx.spotlight.radius, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
-      board.render(ctx, w, h);
+      const fadeCfg = state.effects && state.effects.fade;
+      const r = board.render(ctx, w, h, fadeCfg);
+      fading = !!(r && r.animating);
+      if (r && r.removed && !board.shapes.length) gcp.send('overlay:op', { a: 'empty' });
       if (fx && on && fx.cursor.on && cursor.x > -500) {
         ctx.beginPath(); ctx.fillStyle = hexA(fx.cursor.color, fx.cursor.opacity / 100);
         ctx.arc(cursor.x, cursor.y, fx.cursor.size, 0, Math.PI * 2); ctx.fill();
@@ -68,6 +73,7 @@
 
   // ---------- Eventos do processo principal ----------
   gcp.on('overlay:state', (s) => { state = s; if (s.tool) setTool(s.tool); dirty = true; renderBanner(); });
+  gcp.invoke('overlay:get-state').then((s) => { if (s && !state.effects) { state = s; if (s.tool) setTool(s.tool); dirty = true; renderBanner(); } }).catch(() => {});
   gcp.on('effects:changed', (fx) => { state.effects = fx; dirty = true; renderBanner(); });
   gcp.on('overlay:cursor', (p) => { cursor = p; dirty = true; });
   gcp.on('overlay:click', (c) => {
@@ -118,6 +124,7 @@
     if (!cur) { dirty = true; return; }
     const p = [e.clientX / innerWidth, e.clientY / innerHeight];
     if (cur.tool === 'pen' || cur.tool === 'marker') cur.pts.push(p); else cur.pts[1] = p;
+    cur._t = performance.now();
     dirty = true;
   });
   canvas.addEventListener('pointerup', () => { if (cur) { mine.push(cur); redo.length = 0; cur = null; gcp.send('overlay:op', { a: 'mark' }); } });

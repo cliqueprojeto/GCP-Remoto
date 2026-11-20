@@ -86,6 +86,10 @@
       ${row('Holofote', 'Escurece a tela e mantém iluminada a área ao redor do ponteiro.', toggle('spotlight.on', fx.spotlight.on))}
       ${row('Raio do holofote', '', range('spotlight.radius', fx.spotlight.radius, 60, 400, ' px'))}
       ${row('Escurecimento', '', range('spotlight.dim', fx.spotlight.dim, 20, 90, '%'))}
+      <div class="sgroup">Desenhos</div>
+      ${row('Desvanecer desenhos automaticamente', 'Cada desenho some sozinho, com efeito suave, depois do tempo escolhido.', toggle('fade.on', (fx.fade || {}).on))}
+      ${row('Tempo na tela', 'Quanto tempo cada desenho fica visível antes de começar a sumir.', range('fade.seconds', (fx.fade || {}).seconds || 5, 1, 60, ' s'))}
+      ${row('Duração do desvanecimento', 'Velocidade da animação de sumir.', range('fade.ms', (fx.fade || {}).ms || 800, 200, 3000, ' ms', 100))}
       <div class="sgroup">Widget e sessão</div>
       ${row('Widget de ferramentas', 'Barra flutuante (recolhida ou expandida) para desenhar na tela. Arraste para qualquer lugar.', toggle('widget.on', fx.widget.on))}
       ${row('Efeitos durante sessões remotas', 'Mostra os efeitos do mouse automaticamente quando alguém acessa este computador.', toggle('showDuringSession', fx.showDuringSession))}
@@ -134,11 +138,29 @@
           <div class="sgroup">Identidade</div>
           ${row('Gerar novo ID', 'Troca o número deste computador. Quem tem o ID antigo salvo perde o acesso.', `<button class="btn sm danger" id="new-id">${icon('refresh')}Gerar novo ID</button>`)}`;
         break;
+      case 'audio': {
+        const devs = await GVoice.listDevices().catch(() => ({ inputs: [], outputs: [] }));
+        const a = st.audio || {};
+        const opt = (list, cur) => list.map(d => `<option value="${esc(d.id)}" ${d.id === (cur || '') ? 'selected' : ''}>${esc(d.label)}</option>`).join('') || '<option value="">Nenhum dispositivo encontrado</option>';
+        html = `
+          <div class="sgroup">Conversa por voz</div>
+          <p class="sc-note">Converse com a pessoa do outro lado direto pela sessão, sem abrir outro programa. Fones, headsets e interfaces de áudio USB ou Bluetooth aparecem aqui assim que são conectados.</p>
+          ${row('Microfone', `${devs.inputs.length} dispositivo(s) de entrada detectado(s).`, `<select class="input" data-k="audio.micId">${opt(devs.inputs, a.micId)}</select>`)}
+          ${row('Ganho do microfone', 'Aumente se a sua voz chega baixa; diminua se chega distorcida.', range('audio.micGain', a.micGain == null ? 100 : a.micGain, 0, 200, '%', 5))}
+          ${row('Nível ao vivo', 'Fale normalmente: o ideal é a barra chegar ao amarelo nas palavras mais fortes.', `<div class="meter"><i id="mic-meter"></i></div><button class="btn sm" id="mic-test">${icon('mic')}Testar microfone</button>`)}
+          ${row('Alto-falante ou fone', `${devs.outputs.length} dispositivo(s) de saída detectado(s).`, `<select class="input" data-k="audio.speakerId">${opt(devs.outputs, a.speakerId)}</select>`)}
+          ${row('Volume de quem fala', '', range('audio.volume', a.volume == null ? 100 : a.volume, 0, 100, '%', 5))}
+          ${row('Testar alto-falante', 'Toca um som curto no dispositivo escolhido.', `<button class="btn sm" id="spk-test">${icon('sound')}Tocar som de teste</button>`)}
+          <div class="sgroup">Durante a sessão</div>
+          <p class="sc-note">Clique no ícone de microfone na barra da sessão para conversar. O ícone mostra o seu nível ao vivo e acende um ponto verde quando o outro lado fala. Botão direito no ícone encerra a conversa. O microfone de cada lado só é transmitido depois que a própria pessoa o liga.</p>`;
+        break;
+      }
       case 'video':
         html = `
           ${row('Resolução transmitida', 'Limite da resolução enviada por este computador e padrão ao acessar outros.', select('session.resolution', st.session.resolution, [['auto', 'Automática (nativa)'], ['3840x2160', '3840 × 2160 (4K)'], ['2560x1440', '2560 × 1440'], ['1920x1080', '1920 × 1080 (Full HD)'], ['1600x900', '1600 × 900'], ['1366x768', '1366 × 768'], ['1280x720', '1280 × 720 (HD)'], ['1024x576', '1024 × 576']]))}
           ${row('Perfil de transmissão', 'Velocidade mantém o movimento fluido mesmo com internet fraca (como TeamViewer); Qualidade prioriza a nitidez do texto.', select('session.profile', st.session.profile || 'speed', [['speed', 'Velocidade — quase em tempo real (recomendado)'], ['balanced', 'Equilibrado'], ['quality', 'Qualidade de imagem']]))}
           ${row('Codificação de vídeo', 'Automática usa a placa de vídeo (hardware) quando disponível.', select('session.codec', st.session.codec || 'auto', [['auto', 'Automática (recomendado)'], ['h264', 'H.264'], ['vp8', 'VP8'], ['vp9', 'VP9'], ['av1', 'AV1']]))}
+          ${row('Barra da sessão em tela cheia', 'Ao clicar: não abre sozinha ao encostar no topo (não atrapalha guias e botões de fechar).', select('session.toolbarMode', st.session.toolbarMode || 'click', [['click', 'Mostrar ao clicar na aba (recomendado)'], ['hover', 'Mostrar ao parar o mouse na aba'], ['pinned', 'Sempre visível']]))}
           ${row('Ponteiro na tela remota', 'Ponto: marca exatamente onde o clique cai, sem duplicar a seta do outro computador.', select('session.pointer', st.session.pointer || 'dot', [['dot', 'Ponto preciso (recomendado)'], ['arrow', 'Seta'], ['none', 'Oculto (só a seta remota)']]))}
           ${row('Quadros por segundo', '', select('session.fps', st.session.fps, [[15, '15 fps (economia)'], [24, '24 fps'], [30, '30 fps (recomendado)'], [60, '60 fps (fluido)']]))}
           ${row('Qualidade', 'Mais qualidade usa mais internet.', select('session.quality', st.session.quality, [['low', 'Baixa — conexões lentas'], ['medium', 'Equilibrada'], ['high', 'Alta'], ['max', 'Máxima — rede local']]))}`;
@@ -217,6 +239,21 @@
     if ($('#open-support')) $('#open-support').onclick = () => GSupport.open();
     if ($('#sc-reset')) $('#sc-reset').onclick = async () => { await save('shortcuts', st.defaultShortcuts); renderSettings(tab, el, ctx); };
 
+    if ($('#mic-test')) {
+      let test = null;
+      const stopTest = () => { if (test) { test.stop(); test = null; } const m = el.querySelector('#mic-meter'); if (m) m.style.width = '0'; const b = el.querySelector('#mic-test'); if (b) b.innerHTML = `${icon('mic')}Testar microfone`; };
+      $('#mic-test').onclick = async () => {
+        if (test) return stopTest();
+        const s2 = await gcp.invoke('settings:get');
+        try {
+          test = await GVoice.processedMic((s2.audio || {}).micId || '', (s2.audio || {}).micGain, (l) => { const m = el.querySelector('#mic-meter'); if (m) m.style.width = Math.round(l * 100) + '%'; else stopTest(); });
+          $('#mic-test').innerHTML = `${icon('x')}Parar teste`;
+          setTimeout(stopTest, 20000);
+        } catch (e) { toast('Não foi possível abrir o microfone: ' + (e.message || e.name), 'error'); }
+      };
+      el.querySelectorAll('[data-k^="audio."]').forEach(inp => inp.addEventListener(inp.type === 'range' ? 'input' : 'change', () => { if (inp.dataset.k === 'audio.micGain' && test) test.setGain(Number(inp.value)); else if (test && inp.dataset.k === 'audio.micId') { stopTest(); } }));
+    }
+    if ($('#spk-test')) $('#spk-test').onclick = async () => { const s2 = await gcp.invoke('settings:get'); GVoice.testSpeaker((s2.audio || {}).speakerId || '', (s2.audio || {}).volume); };
     if ($('#upd-box')) renderUpdateBox($('#upd-box'));
     if ($('#nt-run')) $('#nt-run').onclick = () => runNetTest($('#nt-box'), st);
     el.querySelectorAll('[data-clear]').forEach(btn => btn.onclick = async () => {

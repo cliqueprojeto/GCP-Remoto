@@ -70,14 +70,17 @@ const DEFAULTS = {
     showRemoteCursor: true,
     profile: 'speed',             // speed | balanced | quality
     codec: 'auto',                // auto | h264 | vp8 | vp9 | av1
-    pointer: 'dot'                // dot | arrow | none
+    pointer: 'dot',               // dot | arrow | none
+    toolbarMode: 'click'          // click | hover | pinned  (barra da sessão em tela cheia)
   },
+  audio: { micId: '', speakerId: '', micGain: 100, volume: 100 },   // conversa por voz
   shortcuts: { ...DEFAULT_SHORTCUTS },
   effects: {
     cursor: { on: true, color: '#ffd400', size: 34, opacity: 45 },
     clicks: { on: true, left: '#4fc3f7', right: '#ff9800', size: 39 },
     spotlight: { on: false, radius: 170, dim: 62 },
     widget: { on: false, expanded: false, x: null, y: null },
+    fade: { on: false, seconds: 5, ms: 800 },   // desvanecer desenhos automaticamente
     showDuringSession: false,     // mostra efeitos automaticamente quando há sessão remota
     sessionBanner: true          // aviso discreto "sessão remota ativa" na tela acessada
   },

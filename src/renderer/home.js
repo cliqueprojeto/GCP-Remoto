@@ -256,6 +256,28 @@
     $('#host-chat').classList.add('hidden');
     clearInterval(sessionTimer);
   });
+  // ---- Conversa por voz (lado acessado) ----
+  const renderHostMic = (st) => {
+    const b = $('#inc-mic');
+    b.classList.toggle('on', !!st.micOn);
+    b.querySelector('.ic-wrap').innerHTML = icon(st.micOn ? 'mic' : 'micOff');
+    $('#inc-mic-txt').textContent = st.micOn ? 'Microfone ligado' : (st.active ? 'Responder por voz' : 'Microfone');
+    if (!st.micOn) b.style.setProperty('--lvl', 0);
+  };
+  renderHostMic({});
+  Host.on('voice', renderHostMic);
+  Host.on('voice-level', (l) => $('#inc-mic').style.setProperty('--lvl', l.toFixed(2)));
+  Host.on('voice-remote', (l) => $('#inc-mic').classList.toggle('talking', l > 0.18));
+  Host.on('session-end', () => renderHostMic({}));
+  $('#inc-mic').onclick = async () => { const v = Host.voice(); if (!v) return; try { await v.toggleMic(); } catch (e) { toast('Não foi possível usar o microfone: ' + (e.message || e.name), 'error', 6000); } };
+  GVoice.watchDevices(async (devs, added, removedCount) => {
+    for (const d of added) toast(`Dispositivo de áudio conectado: ${d.label}`, 'ok', 4000);
+    if (removedCount) toast('Dispositivo de áudio removido — usando o padrão do sistema.', 'info', 4000);
+    await Host.reloadSettings();
+    if (Host.session && Host.session.voiceObj) Host.session.voiceObj.refreshDevice().catch(() => {});
+    if ($('#page-settings').classList.contains('active') && setTab === 'audio') GSettings.renderSettings('audio', $('#set-body'), ctx);
+  });
+
   $('#inc-control').onchange = (e) => Host.setPerm('control', e.target.checked);
   $('#inc-files').onchange = (e) => Host.setPerm('files', e.target.checked);
   $('#inc-end').onclick = () => Host.end('Você encerrou a sessão.');

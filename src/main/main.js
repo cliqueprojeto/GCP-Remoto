@@ -14,6 +14,7 @@ const files = require('./files');
 const { NoticeManager } = require('./notices');
 const { integrateAppImage, installedPath } = require('./linux-integration');
 const updater = require('./updater');
+const kwin = require('./kwin');
 
 // Apoio ao projeto (voluntário)
 const SUPPORT = {
@@ -318,11 +319,11 @@ function registerIpc() {
     return {
       displayName: d.displayName, server: d.server, iceServers: d.iceServers, turn: d.turn,
       security: { ...d.security, permanentHash: undefined, hasPermanent: !!d.security.permanentHash },
-      session: d.session, shortcuts: d.shortcuts, general: d.general, defaultShortcuts: DEFAULT_SHORTCUTS
+      session: d.session, shortcuts: d.shortcuts, general: d.general, audio: d.audio, defaultShortcuts: DEFAULT_SHORTCUTS
     };
   });
   h('settings:set', (_e, key, value) => {
-    const allowed = ['displayName', 'server', 'iceServers', 'turn', 'security', 'session', 'shortcuts', 'general'];
+    const allowed = ['displayName', 'server', 'iceServers', 'turn', 'security', 'session', 'shortcuts', 'general', 'audio'];
     if (!allowed.includes(key)) throw new Error('chave inválida');
     if (key === 'security' && value) { delete value.permanentHash; delete value.permanentSalt; }
     if (key === 'displayName') { store.data.displayName = String(value).slice(0, 60); store.save(); }
@@ -397,6 +398,7 @@ function registerIpc() {
   h('overlay:display', (_e, displayId) => { overlay.setDisplay(displayId); return true; });
   ipcMain.on('overlay:op', (_e, op) => overlay.drawOp(op));
   h('overlay:clear', () => overlay.clearShapes());
+  h('overlay:get-state', () => overlay.state());
   h('effects:get', () => overlay.effects());
   h('effects:set', (_e, patch) => {
     return overlay.updateEffects(patch);
@@ -541,6 +543,7 @@ app.whenReady().then(() => {
   createMainWindow();
   syncGlobalShortcuts();
   watchForUpdate();
+  kwin.installKeepAbove(logLine);   // KDE Wayland: camada, widget e avisos sempre acima (sem clicar no ícone)
   setTimeout(async () => {
     if (!app.isPackaged || !updater.isDue(store.get('general'))) return;
     try {

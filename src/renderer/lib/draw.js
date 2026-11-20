@@ -34,7 +34,7 @@
     switch (s.tool) {
       case 'pen':
       case 'marker': {
-        if (s.tool === 'marker') { ctx.globalAlpha = 0.38; ctx.lineWidth = lw * 4; ctx.lineCap = 'square'; }
+        if (s.tool === 'marker') { ctx.globalAlpha *= 0.38; ctx.lineWidth = lw * 4; ctx.lineCap = 'square'; }
         ctx.beginPath();
         ctx.moveTo(P[0][0], P[0][1]);
         if (P.length === 1) ctx.lineTo(P[0][0] + 0.1, P[0][1] + 0.1);
@@ -88,12 +88,13 @@
       switch (op.a) {
         case 'upsert': {
           const i = this.shapes.findIndex(s => s.id === op.s.id);
+          op.s._t = performance.now();   // o tempo na tela conta a partir da última alteração
           if (i >= 0) this.shapes[i] = op.s; else this.shapes.push(op.s);
           break;
         }
         case 'append': {
           const s = this.shapes.find(x => x.id === op.id);
-          if (s) s.pts.push(...op.pts);
+          if (s) { s.pts.push(...op.pts); s._t = performance.now(); }
           break;
         }
         case 'remove': this.shapes = this.shapes.filter(s => s.id !== op.id); break;
@@ -101,7 +102,21 @@
       }
     }
     lastBy(by) { for (let i = this.shapes.length - 1; i >= 0; i--) if (this.shapes[i].by === by) return this.shapes[i]; return null; }
-    render(ctx, w, h) { for (const s of this.shapes) renderShape(ctx, s, w, h); }
+    render(ctx, w, h, fade) {
+      if (!fade || !fade.on) { for (const s of this.shapes) renderShape(ctx, s, w, h); return false; }
+      // Desvanecimento: cada forma fica 'seconds' na tela e some em 'ms' milissegundos
+      const now = performance.now(), keep = (fade.seconds || 5) * 1000, dur = Math.max(50, fade.ms || 800);
+      let changed = false;
+      this.shapes = this.shapes.filter(s => { const age = now - (s._t || now); if (age > keep + dur) { changed = true; return false; } return true; });
+      let animating = false;
+      for (const s of this.shapes) {
+        const age = now - (s._t || now);
+        const a = age <= keep ? 1 : 1 - (age - keep) / dur;
+        if (age > keep) animating = true;
+        ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, a)); renderShape(ctx, s, w, h); ctx.restore();
+      }
+      return { animating: animating || this.shapes.length > 0, removed: changed };
+    }
   }
 
   function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }

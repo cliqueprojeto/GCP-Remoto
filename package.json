@@ -1,7 +1,7 @@
 {
   "name": "gcp-remoto",
   "productName": "GCP Remoto",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Acesso remoto gratuito e livre para Windows e Linux: controle total, desenho ao vivo, arquivos com Ctrl+C/Ctrl+V, chat e favoritos. Desenvolvido por Bruno Albertini | Gestão Cultural Pro.",
   "main": "src/main/main.js",
   "homepage": "https://github.com/cliqueprojeto/GCP-Remoto",

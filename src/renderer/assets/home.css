@@ -189,3 +189,14 @@
 .nt-rec { padding: 12px 14px; border-radius: 12px; background: rgba(79, 195, 247, .08); border: 1px solid rgba(79, 195, 247, .3); font-size: 13.5px; line-height: 1.5; }
 .update-banner { display: flex; align-items: center; gap: 12px; padding: 10px 26px; background: linear-gradient(90deg, rgba(61, 220, 151, .14), rgba(79, 195, 247, .08)); border-bottom: 1px solid rgba(61, 220, 151, .35); font-size: 13.5px; }
 .update-banner .ic { color: var(--ok); } .update-banner span { flex: 1; }
+
+/* Microfone com indicador de nível ao vivo (discreto) */
+.mic-btn { position: relative; overflow: hidden; }
+.mic-btn .lvl { position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; pointer-events: none; }
+.mic-btn .lvl i { display: block; height: 100%; width: calc(var(--lvl, 0) * 100%); background: linear-gradient(90deg, #3ddc97, #ffd400 70%, #ff5d5d); transition: width .06s linear; }
+.mic-btn.on { color: var(--ok); }
+.mic-btn.muted-remote .rdot { display: none; }
+.mic-btn .rdot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); opacity: 0; transform: scale(.6); transition: opacity .1s, transform .1s; box-shadow: 0 0 0 2px rgba(61,220,151,.25); }
+.mic-btn.talking .rdot { opacity: 1; transform: scale(1); }
+.meter { width: 250px; height: 8px; border-radius: 8px; background: #22314f; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3ddc97, #ffd400 70%, #ff5d5d); transition: width .06s linear; }

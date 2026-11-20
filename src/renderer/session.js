@@ -69,6 +69,7 @@
     });
     peer.on('call', (call) => {
       if (!S.token || !call.metadata || call.metadata.token !== S.token) { call.close(); return; }
+      if (call.metadata.kind === 'voice') { voice().answer(call); toast(`${S.hello ? S.hello.name : 'O outro lado'} iniciou a conversa por voz. Clique no microfone para responder.`, 'info', 6000); return; }
       S.call = call;
       call.answer(undefined, { sdpTransform: (sdp) => GProto.tuneSdp(sdp, { start: 3000, min: 800, max: 20000 }) });
       call.on('stream', (stream) => {
@@ -236,21 +237,29 @@
     S.fullscreen = await gcp.invoke('win:fullscreen', v);
     document.body.classList.toggle('fs', S.fullscreen);
     $('#b-full').innerHTML = icon(S.fullscreen ? 'exitFullscreen' : 'fullscreen');
-    if (S.fullscreen) autoHideBar(); else { document.body.classList.remove('bar-hidden'); S.barHidden = false; }
+    if (S.fullscreen) { if (barMode() === 'pinned') showBar(); else setTimeout(() => { if (S.fullscreen && barMode() !== 'pinned') hideBar(); }, 1500); }
+    else showBar();
     setTimeout(layout, 120);
   }
 
-  let barTimer;
-  function autoHideBar() {
+  // Barra da sessão: 'click' (abre/recolhe só ao clicar — não atrapalha guias e botões no topo),
+  // 'hover' (abre ao parar o mouse sobre a aba) ou 'pinned' (sempre visível).
+  let barTimer, peekTimer;
+  const barMode = () => (S.settings && S.settings.session && S.settings.session.toolbarMode) || 'click';
+  function showBar() { clearTimeout(barTimer); document.body.classList.remove('bar-hidden'); S.barHidden = false; scheduleHide(); setTimeout(layout, 60); }
+  function hideBar() { clearTimeout(barTimer); closeMenus(); document.body.classList.add('bar-hidden'); S.barHidden = true; setTimeout(layout, 60); }
+  function scheduleHide() {
     clearTimeout(barTimer);
-    if (!S.fullscreen) return;
-    barTimer = setTimeout(() => { if (!$$('.menu:not(.hidden)').length && !$('#bar').matches(':hover')) { document.body.classList.add('bar-hidden'); S.barHidden = true; } }, 2500);
+    if (!S.fullscreen || barMode() !== 'hover') return;
+    barTimer = setTimeout(() => { if (!$$('.menu:not(.hidden)').length && !$('#bar').matches(':hover')) hideBar(); else scheduleHide(); }, 2500);
   }
-  document.addEventListener('mousemove', (e) => {
-    if (S.fullscreen && e.clientY < 12) { document.body.classList.remove('bar-hidden'); S.barHidden = false; autoHideBar(); }
-  });
-  $('#peek').onclick = () => { document.body.classList.remove('bar-hidden'); S.barHidden = false; autoHideBar(); };
-  function toggleBar() { S.barHidden = !S.barHidden; document.body.classList.toggle('bar-hidden', S.barHidden); setTimeout(layout, 60); }
+  function autoHideBar() { scheduleHide(); }
+  $('#bar').addEventListener('mouseleave', () => scheduleHide());
+  $('#peek').onclick = () => showBar();
+  $('#peek').addEventListener('mouseenter', () => { if (barMode() === 'hover') { clearTimeout(peekTimer); peekTimer = setTimeout(showBar, 350); } });
+  $('#peek').addEventListener('mouseleave', () => clearTimeout(peekTimer));
+  $('#b-collapse').onclick = () => hideBar();
+  function toggleBar() { if (S.barHidden) showBar(); else hideBar(); }
 
   // ---------- Coordenadas ----------
   function norm(e) {
@@ -573,8 +582,18 @@
       ${[[1024, 640], [1280, 800], [1366, 768], [1600, 900], [1920, 1080]].map(([w, h]) => mi(`${w} × ${h}`, `data-sz="${w}x${h}"`, { ic: 'monitor' })).join('')}
       ${mi('Maximizar', 'data-sz="max"', { ic: 'resize' })}
       ${mi('Tela cheia', 'data-sz="full"', { ic: 'fullscreen', right: sc.fullscreen })}
-      ${mi('Ocultar barra', 'data-sz="bar"', { ic: 'minus', right: sc.toolbar })}`;
+      ${mi('Ocultar barra', 'data-sz="bar"', { ic: 'minus', right: sc.toolbar })}
+      <div class="mdiv"></div><h4>Barra em tela cheia</h4>
+      ${mi('Mostrar ao clicar na aba', 'data-bm="click"', { sel: barMode() === 'click' })}
+      ${mi('Mostrar ao parar o mouse na aba', 'data-bm="hover"', { sel: barMode() === 'hover' })}
+      ${mi('Sempre visível', 'data-bm="pinned"', { sel: barMode() === 'pinned' })}`;
     $$('[data-v]', m).forEach(b => b.onclick = () => { setViewMode(b.dataset.v); closeMenus(); });
+    $$('[data-bm]', m).forEach(b => b.onclick = async () => {
+      S.settings.session.toolbarMode = b.dataset.bm;
+      await gcp.invoke('settings:set', 'session', { toolbarMode: b.dataset.bm });
+      buildViewMenu();
+      if (b.dataset.bm === 'pinned') showBar(); else scheduleHide();
+    });
     $$('[data-sz]', m).forEach(b => b.onclick = async () => {
       closeMenus();
       const v = b.dataset.sz;
@@ -654,9 +673,14 @@
       ${mi('Efeito de clique', 'data-fx="clicks"', { sel: fx.clicks.on, right: sc.clickEffect })}
       ${mi('Holofote', 'data-fx="spotlight"', { sel: fx.spotlight.on, right: sc.spotlight })}
       ${mi('Widget de ferramentas', 'data-fx="widget"', { sel: fx.widget.on, right: sc.presenterWidget })}
+      <div class="mdiv"></div><h4>Desenhos</h4>
+      ${mi('Desvanecer automaticamente', 'data-fade="toggle"', { sel: !!(fx.fade && fx.fade.on) })}
+      <div style="display:flex;gap:6px;padding:4px 10px 8px;flex-wrap:wrap">${[2, 5, 10, 30].map(sec => `<button class="btn sm ${fx.fade && fx.fade.on && fx.fade.seconds === sec ? 'primary' : ''}" data-fade-s="${sec}">${sec} s</button>`).join('')}</div>
       <div class="mdiv"></div><h4>Cor do destaque</h4>
       <div style="display:flex;gap:6px;padding:4px 10px 8px">${GDraw.PALETTE.slice(0, 8).map(c => `<button class="cdot ${fx.cursor.color === c ? 'sel' : ''}" data-cc="${c}" style="background:${c}"></button>`).join('')}</div>`;
     $$('[data-fx]', m).forEach(b => b.onclick = () => toggleFx(b.dataset.fx));
+    const fd = $('[data-fade]', m); if (fd) fd.onclick = () => send({ t: 'effects', patch: { fade: { on: !(S.effects.fade && S.effects.fade.on) } } });
+    $$('[data-fade-s]', m).forEach(b => b.onclick = () => send({ t: 'effects', patch: { fade: { on: true, seconds: Number(b.dataset.fadeS) } } }));
     $$('[data-cc]', m).forEach(b => b.onclick = () => send({ t: 'effects', patch: { cursor: { color: b.dataset.cc, on: true } } }));
   }
   function toggleFx(k) {
@@ -720,6 +744,41 @@
     if (!me && $('#p-chat').classList.contains('hidden')) { $('#chat-badge').classList.remove('hidden'); toast(`${from}: ${text}`, 'info', 5000); }
   }
   $('#chat-form').onsubmit = (e) => { e.preventDefault(); const i = $('#chat-input'); const t = i.value.trim(); if (!t) return; send({ t: 'chat', text: t }); addChat('Você', t, true); i.value = ''; };
+
+  // ---------- Conversa por voz ----------
+  let voiceObj = null;
+  function voice() {
+    if (voiceObj) return voiceObj;
+    voiceObj = new GVoice.Voice({
+      peer: S.peer, remotePeerId: () => PEER_PREFIX + S.params.id, token: () => S.token,
+      audio: () => S.settings.audio || {},
+      onState: (st) => renderMic(st),
+      onLevel: (l) => $('#b-mic').style.setProperty('--lvl', l.toFixed(2)),
+      onRemoteLevel: (l) => $('#b-mic').classList.toggle('talking', l > 0.18)
+    });
+    return voiceObj;
+  }
+  function renderMic(st) {
+    const b = $('#b-mic');
+    b.classList.toggle('on', st.micOn);
+    b.querySelector('.ic-wrap').innerHTML = icon(st.micOn ? 'mic' : 'micOff');
+    b.title = st.micOn ? `Microfone ligado${st.micLabel ? ' · ' + st.micLabel : ''} — clique para silenciar` : (st.active ? 'Conversa por voz ativa — clique para ligar seu microfone' : 'Conversar por voz — clique para ligar o microfone');
+    if (!st.micOn) b.style.setProperty('--lvl', 0);
+  }
+  renderMic({ micOn: false, active: false });
+  window.__voz = () => voiceObj;  // diagnóstico
+  $('#b-mic').onclick = async () => {
+    if (!S.connected) return;
+    try { await voice().toggleMic(); } catch (e) { toast('Não foi possível usar o microfone: ' + (e.message || e.name), 'error', 6000); }
+  };
+  $('#b-mic').oncontextmenu = (e) => { e.preventDefault(); if (voiceObj && voiceObj.call) { voiceObj.end(); toast('Conversa por voz encerrada.', 'info'); } };
+  GVoice.watchDevices(async (devs, added, removedCount) => {
+    for (const d of added) toast(`Dispositivo de áudio conectado: ${d.label}`, 'ok', 4000);
+    if (removedCount) toast('Dispositivo de áudio removido — usando o padrão do sistema.', 'info', 4000);
+    S.settings = await gcp.invoke('settings:get');
+    if (voiceObj) voiceObj.refreshDevice().catch(() => {});
+  });
+  window.addEventListener('beforeunload', () => { if (voiceObj) voiceObj.end(); });
 
   // ---------- Arquivos ----------
   let localDir = '', remoteDir = '', localSel = new Set(), remoteSel = new Set(), remoteReq = 0;

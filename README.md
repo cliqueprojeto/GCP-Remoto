@@ -1,12 +1,13 @@
 # GCP-Remoto
 
-## Novidades 1.2.0
+## Novidades 1.3.0
 
-- **Ctrl+C no computador remoto, Ctrl+V aqui:** copie arquivos de qualquer jeito no outro computador (teclado, botão direito, Explorer, Dolphin, área de trabalho) e cole com Ctrl+V em qualquer pasta, com janela de progresso sempre visível.
-- **Colar na Área de Trabalho** com um clique ao final da cópia, em qualquer sistema.
-- **Ctrl+0** limpa todos os desenhos.
+- **Converse por voz dentro da sessão**, sem abrir Google Meet: microfone, headset, fone USB ou Bluetooth e interfaces de áudio, com cancelamento de eco e indicador de nível ao vivo no ícone.
+- **Desenhos que desvanecem sozinhos**, com tempo na tela e velocidade da animação ajustáveis.
+- **KDE Plasma (Wayland):** os desenhos aparecem por cima das janelas na hora, sem clicar no ícone do programa.
+- **Barra da sessão em tela cheia** que só abre ao clicar, para não atrapalhar guias e botões no topo.
 
-Na versão 1.1.0: desempenho quase em tempo real, ponteiro preciso, teste de conexão e atualizações pelo GitHub. Na 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
+Na versão 1.2.0: Ctrl+C / Ctrl+V direto entre computadores, com janela de progresso e "Colar na Área de Trabalho". Na 1.1.0: desempenho quase em tempo real, ponteiro preciso, teste de conexão e atualizações pelo GitHub. Na 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
 
 **Acesso remoto gratuito, livre e completo, com interface em português.**
 
@@ -95,15 +96,26 @@ O AppImage requer FUSE 2, já presente na maioria das distribuições.
 
 ### Exibição
 - Ajustar à janela, **tamanho original (1:1)** com rolagem, ou esticar.
-- Tamanhos de janela prontos (1024×640 até 1920×1080), igual à resolução remota, maximizar e **tela cheia** com barra que se esconde.
+- Tamanhos de janela prontos (1024×640 até 1920×1080), igual à resolução remota, maximizar e **tela cheia**.
+- Barra da sessão em tela cheia: **abre ao clicar na aba** (padrão, não atrapalha guias e botões de fechar no topo), ao parar o mouse na aba ou sempre visível.
 - Resolução transmitida (até 4K), 15, 30 ou 60 quadros por segundo e quatro níveis de qualidade, ajustáveis durante a sessão.
 - Latência, resolução, quadros por segundo e taxa de transmissão exibidos em tempo real.
+
+### Conversar por voz
+- Fale com a pessoa do outro lado pela própria sessão, nos dois sentidos, sem abrir outro programa.
+- Funciona com microfone embutido, headset, fones USB ou Bluetooth e interfaces de áudio; os dispositivos aparecem assim que são conectados.
+- Cancelamento de eco, redução de ruído e ganho automático, além de **ganho do microfone** (0 a 200%) e **volume** ajustáveis.
+- **Indicador de nível ao vivo** discreto no ícone do microfone e ponto verde quando o outro lado está falando.
+- **Configurações › Áudio**: escolha do microfone e do alto-falante, medidor de nível e teste de alto-falante.
+- Privacidade: cada lado só transmite o próprio microfone depois de ligá-lo.
 
 ### Desenhar e apresentar na tela remota
 - Caneta, marca-texto, seta, linha, retângulo, elipse e **texto**, com 10 cores, espessura, desfazer, refazer e limpar.
 - **Destaque do cursor**, **anéis de clique** (cores diferentes para o botão esquerdo e o direito) e **holofote**, que escurece a tela e ilumina a área ao redor do ponteiro.
 - **Widget flutuante** recolhido (cronômetro e caneta) ou expandido com todas as ferramentas, que pode ser arrastado para qualquer lugar da tela.
 - Tudo é desenhado na tela do computador acessado: quem está do outro lado vê exatamente o mesmo, ao vivo.
+- **Desvanecimento automático**: cada desenho some sozinho, com efeito suave, depois do tempo escolhido (1 a 60 segundos).
+- No KDE Plasma com Wayland, os desenhos, o widget e os avisos ficam por cima das outras janelas automaticamente.
 - As ferramentas de apresentação também funcionam sem sessão, para aulas e reuniões.
 
 ### Transferir arquivos

@@ -35,7 +35,7 @@ class NoticeManager {
       width, height, x, y, frame: false, transparent: true, resizable: false, movable: true,
       alwaysOnTop: true, skipTaskbar: true, show: false, hasShadow: false, fullscreenable: false,
       minimizable: false, maximizable: false, focusable: true, backgroundColor: '#00000000', icon: this.icon,
-      title: payload.title || 'GCP Remoto',
+      title: 'GCP Remoto — aviso',
       webPreferences: { preload: this.preload, contextIsolation: true, sandbox: false }
     });
     w.setAlwaysOnTop(true, 'screen-saver');

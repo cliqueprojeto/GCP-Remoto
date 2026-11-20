@@ -63,6 +63,7 @@
   }
 
   gcp.on('overlay:state', (s) => { state = { ...state, ...s }; render(); });
+  gcp.invoke('overlay:get-state').then((s) => { if (s && !state.effects) { state = { ...state, ...s }; render(); } }).catch(() => {});
   gcp.on('effects:changed', (fx) => { state.effects = fx; render(); });
   gcp.on('overlay:tool', (t) => { state.tool = t; render(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') gcp.send('overlay:tool', { tool: 'pointer' }); });

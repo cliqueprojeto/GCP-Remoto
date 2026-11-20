@@ -31,6 +31,7 @@
           <button class="icon-btn" data-menu="m-keys" title="Enviar combinações de teclas" data-icon="keyboard"></button>
           <button class="icon-btn" data-menu="m-fx" title="Efeitos na tela remota" data-icon="cursorFx"></button>
           <button class="icon-btn" id="b-files" title="Arquivos" data-icon="folder"></button>
+          <button class="icon-btn mic-btn" id="b-mic" title="Conversar por voz (microfone desligado)"><span class="ic-wrap"></span><span class="rdot"></span><span class="lvl"><i></i></span></button>
           <button class="icon-btn" id="b-chat" title="Chat" data-icon="chat"><span class="badge hidden" id="chat-badge"></span></button>
           <button class="icon-btn" id="b-shot" title="Capturar tela" data-icon="camera"></button>
         </div>
@@ -38,6 +39,7 @@
 
       <div class="right">
         <span class="stat" id="stat"></span>
+        <button class="icon-btn sm" id="b-collapse" title="Recolher a barra (Ctrl+Alt+T)" data-icon="collapse"></button>
         <button class="btn sm danger" id="b-close" data-icon="power">Desconectar</button>
       </div>
     </header>
@@ -125,12 +127,13 @@
   <div class="menu hidden" id="m-keys"></div>
   <div class="menu hidden" id="m-fx"></div>
 
-  <div class="peek" id="peek" title="Mostrar barra"></div>
+  <button class="peek" id="peek" title="Mostrar a barra da sessão" data-icon="expand"><span>GCP Remoto</span></button>
 
   <script src="../../node_modules/peerjs/dist/peerjs.min.js"></script>
   <script src="lib/ui.js"></script>
   <script src="lib/draw.js"></script>
   <script src="lib/proto.js"></script>
+  <script src="lib/voice.js"></script>
   <script src="session.js"></script>
 </body>
 </html>

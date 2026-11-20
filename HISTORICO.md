@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 1.3.0
+
+- Conversa por voz durante a sessão, nos dois sentidos, sem precisar de Google Meet: microfone, headset, fone USB ou Bluetooth e interfaces de áudio, com cancelamento de eco, redução de ruído e ganho automático.
+- Privacidade: cada lado só transmite o próprio microfone depois de ligá-lo.
+- Indicador discreto de nível ao vivo no ícone do microfone e ponto verde quando o outro lado fala.
+- Nova aba Configurações › Áudio: escolha de microfone e alto-falante, ganho do microfone (0 a 200%), volume de quem fala, medidor de nível ao vivo e teste de alto-falante. Dispositivos conectados ou removidos são detectados na hora.
+- Desenhos com desvanecimento automático: tempo na tela (1 a 60 s) e duração da animação ajustáveis, em Apresentação e no menu de efeitos da sessão.
+- KDE Plasma (Wayland): desenhos, widget e avisos aparecem por cima das janelas sem precisar clicar no ícone do programa, por meio do script oficial de janelas do KWin.
+- Barra da sessão em tela cheia: abre ao clicar na aba (não atrapalha guias e botões no topo), ao parar o mouse na aba ou sempre visível; botão para recolher.
+- Camada de desenho e widget sempre recebem as configurações ao abrir.
+
 ## 1.2.0
 
 - Ctrl+C / Ctrl+V direto: arquivos copiados no computador remoto, de qualquer forma (Ctrl+C, botão direito › Copiar, no Explorer, no Dolphin ou na área de trabalho), ficam prontos para colar com Ctrl+V neste computador. Até 1 GB a cópia começa na hora; acima disso, o programa pergunta antes.

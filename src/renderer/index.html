@@ -55,6 +55,7 @@
         <div class="inc-actions">
           <label class="mini-toggle" title="Permitir que controlem mouse e teclado"><span class="switch"><input type="checkbox" id="inc-control" checked><span></span></span>Controle</label>
           <label class="mini-toggle" title="Permitir transferência de arquivos"><span class="switch"><input type="checkbox" id="inc-files" checked><span></span></span>Arquivos</label>
+          <button class="btn sm mic-btn" id="inc-mic" title="Conversar por voz"><span class="ic-wrap"></span><span id="inc-mic-txt">Microfone</span><span class="rdot"></span><span class="lvl"><i></i></span></button>
           <button class="btn sm" id="inc-chat" data-icon="chat">Chat</button>
           <button class="btn sm" id="inc-send" data-icon="upload">Enviar arquivos</button>
           <button class="btn sm" id="inc-widget" data-icon="widget">Ferramentas</button>
@@ -136,6 +137,7 @@
             <button data-tab="general" class="active">Geral</button>
             <button data-tab="security">Segurança</button>
             <button data-tab="video">Vídeo</button>
+            <button data-tab="audio">Áudio</button>
             <button data-tab="connection">Conexão</button>
             <button data-tab="shortcuts">Atalhos</button>
             <button data-tab="about">Sobre</button>
@@ -162,6 +164,7 @@
   <script src="lib/settings-ui.js"></script>
   <script src="lib/support.js"></script>
   <script src="lib/nettest.js"></script>
+  <script src="lib/voice.js"></script>
   <script src="host.js"></script>
   <script src="home.js"></script>
 </body>

@@ -90,7 +90,7 @@ class OverlayManager {
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.loadFile(this.page);
-    win.webContents.on('did-finish-load', () => { this.push('overlay:state', this.state()); if (this.layerVisible) this._reveal(); });
+    win.webContents.on('did-finish-load', () => { if (!win.isDestroyed()) win.webContents.send('overlay:state', this.state()); if (this.layerVisible) this._reveal(); });
     win.on('closed', () => { if (this.win === win) { this.win = null; this.layerVisible = false; this._stopTimer(); } });
     this.win = win;
     return win;
@@ -231,7 +231,7 @@ class OverlayManager {
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.loadFile(this.widgetPage);
     win.once('ready-to-show', () => { if (!win.isDestroyed()) { win.showInactive(); this._raise(win, 'screen-saver', 1); this.keepOnScreen(); this._startTopGuard(); } });
-    win.webContents.on('did-finish-load', () => this.pushWidget('overlay:state', this.state()));
+    win.webContents.on('did-finish-load', () => { if (!win.isDestroyed()) win.webContents.send('overlay:state', this.state()); });
     let saveT;
     win.on('moved', () => {
       clearTimeout(saveT);
@@ -277,6 +277,7 @@ class OverlayManager {
   // ---------- Desenho e sessão ----------
   drawOp(op) {
     if (op && op.a === 'mark') { this.hasShapes = true; return; }   // desenho local já está na camada
+    if (op && op.a === 'empty') { this.hasShapes = false; this.sync(); return; } // todos desvaneceram
     if (op && op.a === 'upsert') this.hasShapes = true;
     const wasVisible = this.layerVisible;
     this.showLayer();

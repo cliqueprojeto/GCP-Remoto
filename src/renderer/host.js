@@ -29,6 +29,12 @@
       this.peer = peer;
       peer.on('open', () => { this.retry = 0; this.setStatus('online'); });
       peer.on('connection', (conn) => this.onConnection(conn));
+      peer.on('call', (call) => {
+        const s = this.session;
+        if (!s || !call.metadata || call.metadata.kind !== 'voice' || call.metadata.token !== s.token || call.peer !== s.conn.peer) { call.close(); return; }
+        this.voice(s).answer(call);
+        gcp.invoke('notice:info', { tone: 'info', icon: 'headset', title: `${s.who.name} quer conversar por voz`, body: 'Você já ouve a pessoa. Para responder, clique em Microfone na faixa da sessão do GCP Remoto.', ms: 10000 });
+      });
       peer.on('disconnected', () => { if (this.peer === peer && !peer.destroyed) { this.setStatus('connecting'); setTimeout(() => { try { peer.reconnect(); } catch (_) { this.reconnect(); } }, 1500); } });
       peer.on('error', (err) => {
         if (this.peer !== peer) return;
@@ -373,6 +379,19 @@
       s.transfers.send(paths, { purpose: 'clip' }).catch(() => {});
     },
 
+    voice(s) {
+      s = s || this.session; if (!s) return null;
+      if (s.voiceObj) return s.voiceObj;
+      s.voiceObj = new GVoice.Voice({
+        peer: this.peer, remotePeerId: () => s.conn.peer, token: () => s.token,
+        audio: () => this.settings.audio || {},
+        onState: (st) => this.emit('voice', st),
+        onLevel: (l) => this.emit('voice-level', l),
+        onRemoteLevel: (l) => this.emit('voice-remote', l)
+      });
+      return s.voiceObj;
+    },
+
     setPerm(name, val) {
       const s = this.session; if (!s) return;
       s.perms[name] = val;
@@ -396,6 +415,7 @@
       const s = this.session; if (!s) return;
       this.session = null;
       clearInterval(s.clipTimer);
+      if (s.voiceObj) s.voiceObj.end();
       gcp.invoke('files:clip-watch', false);
       try { s.conn.send({ t: 'bye', reason: 'Sessão encerrada pelo computador acessado.' }); } catch (_) {}
       setTimeout(() => { try { s.conn.close(); } catch (_) {} try { s.filesConn && s.filesConn.close(); } catch (_) {} }, 300);

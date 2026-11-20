@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: publicar-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     name: Preparar versão

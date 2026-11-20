@@ -112,7 +112,20 @@ class Store {
     if (!this.data.deviceId) this.data.deviceId = Store.newDeviceId();
     if (!this.data.security.permanentSalt) this.data.security.permanentSalt = crypto.randomBytes(16).toString('hex');
     if (!this.data.displayName) this.data.displayName = require('os').hostname();
+    this.migrateShortcuts();
     this.save();
+  }
+
+  // Versão 2 dos atalhos: ferramentas em Alt+número e efeitos no padrão GCP.
+  // Só troca atalhos que ainda estão no padrão antigo; os personalizados são mantidos.
+  migrateShortcuts() {
+    if (this.data.shortcutsVersion >= 2) return;
+    const OLD = { clearDrawings: 'Ctrl+Alt+X', screenshot: 'Ctrl+Alt+S', nextMonitor: 'Ctrl+Alt+M', chat: 'Ctrl+Alt+C', spotlight: 'Ctrl+Alt+L' };
+    const sc = this.data.shortcuts;
+    for (const k of Object.keys(DEFAULT_SHORTCUTS)) {
+      if (!(k in sc) || sc[k] === OLD[k]) sc[k] = DEFAULT_SHORTCUTS[k];
+    }
+    this.data.shortcutsVersion = 2;
   }
 
   static newDeviceId() {

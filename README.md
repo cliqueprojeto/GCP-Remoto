@@ -1,13 +1,12 @@
 # GCP-Remoto
 
-## Novidades 1.0.0
+## Novidades 1.0.1
 
-- **Primeira versão pública:** acesse e controle outro computador pela internet ou pela rede local, entre Windows e Linux, nos dois sentidos.
-- **Desenho ao vivo na tela remota:** caneta, marca-texto, setas, formas e texto, com destaque do cursor, anéis de clique, holofote e um widget flutuante de ferramentas. Quem acompanha vê tudo em tempo real.
-- **Arquivos com Ctrl+C / Ctrl+V entre computadores**, inclusive pastas inteiras, além de um gerenciador com os dois computadores lado a lado.
-- **Arch Linux, BigLinux e Manjaro:** pacote `.pkg.tar.zst` pronto para o `pacman` e o Pamac.
+- **Atualizar ficou automático:** instale a versão nova por cima e o GCP-Remoto, mesmo aberto na bandeja, reinicia sozinho quando não houver sessão em andamento.
+- **Widget de apresentação em janela própria,** que nunca cobre a tela; Esc ou o botão direito sempre devolvem o mouse.
+- **Atalhos simples:** Alt+1 a Alt+8 para as ferramentas de desenho e Ctrl+Alt+S/H/C/W para os efeitos do mouse.
 
-Veja o [histórico de versões](HISTORICO.md).
+Na versão 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
 
 **Acesso remoto gratuito, livre e completo, com interface em português.**
 
@@ -38,7 +37,7 @@ Baixe a versão mais recente na página de [versões publicadas](https://github.
 - **GCP-Remoto-x.y.z-win-x64.zip** — a mesma versão portátil em uma pasta compactada: descompacte e abra `GCP Remoto.exe`.
 - **GCP-Remoto-x.y.z-linux-amd64.deb** — Ubuntu/Debian de 64 bits: instale pelo gerenciador de aplicativos ou com `sudo apt install ./GCP-Remoto-x.y.z-linux-amd64.deb`.
 - **GCP-Remoto-x.y.z-linux-x86_64.rpm** — Fedora e distribuições compatíveis: `sudo dnf install ./GCP-Remoto-x.y.z-linux-x86_64.rpm`.
-- **gcp-remoto-x.y.z-1-x86_64.pkg.tar.zst** — Arch Linux, BigLinux e Manjaro: instale com `sudo pacman -U ./nome-do-pacote.pkg.tar.zst` ou pelo Pamac em **Instalar pacotes locais**.
+- **gcp-remoto-x.y.z-1-x86_64.pkg.tar.zst** — Arch Linux, BigLinux e Manjaro: instale com `sudo pacman -U ./nome-do-pacote.pkg.tar.zst` ou pelo Pamac em **Instalar pacotes locais**. Para atualizar, instale o pacote da versão nova da mesma forma; se o programa estiver aberto na bandeja, ele reinicia sozinho na versão nova.
 - **GCP-Remoto-x.y.z-linux-x86_64.AppImage** — versão portátil Linux: marque o arquivo como executável (`chmod +x arquivo.AppImage`) e abra. Requer FUSE 2; sem FUSE, extraia com `./arquivo.AppImage --appimage-extract` e execute `squashfs-root/AppRun`.
 
 Como o instalador ainda não tem assinatura digital de código, o Windows pode mostrar "O Windows protegeu o computador". Clique em **Mais informações** e depois em **Executar assim mesmo**.

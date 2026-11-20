@@ -148,6 +148,32 @@ function syncGlobalShortcuts() {
   }
 }
 
+// ---------- Atualização instalada com o app aberto ----------
+// Quando o pacote é atualizado (pacman, apt, dnf, instalador do Windows) com o app rodando
+// na bandeja, o processo antigo continuaria ativo. Detecta a troca dos arquivos e reinicia
+// sozinho assim que não houver sessão em andamento.
+function watchForUpdate() {
+  if (!app.isPackaged) return;
+  const asar = path.join(process.resourcesPath, 'app.asar');
+  const stamp = () => { try { const st = fs.statSync(asar); return st.mtimeMs + ':' + st.size; } catch (_) { return null; } };
+  const initial = stamp();
+  if (!initial) return;
+  let pending = false;
+  setInterval(() => {
+    const now = stamp();
+    if (!now || now === initial) return;
+    const busy = (overlay && overlay.sessionInfo) || sessionParams.size > 0;
+    if (!pending) {
+      pending = true;
+      if (busy && notices) notices.info({ tone: 'info', icon: 'refresh', title: 'Atualização instalada', body: 'O GCP-Remoto vai reiniciar sozinho quando a sessão atual terminar.', ms: 9000 });
+    }
+    if (busy) return;
+    quitting = true;
+    app.relaunch({ args: process.argv.slice(1).filter(a => a !== '--hidden').concat(mainWin && mainWin.isVisible() ? [] : ['--hidden']) });
+    app.exit(0);
+  }, 15000);
+}
+
 // ---------- Bandeja ----------
 function trayImage(state) {
   const file = path.join(__dirname, '..', 'renderer', 'assets', `tray-${state}.png`);
@@ -185,7 +211,8 @@ function buildTrayMenu() {
       { label: '♥ Apoie o projeto', click: () => { showMain(); setTimeout(() => mainWin && mainWin.webContents.send('support:open'), 300); } },
       { label: 'Ferramentas de apresentação', click: () => { overlay.updateEffects({ widget: { on: !overlay.effects().widget.on } }); } },
       { type: 'separator' },
-      { label: 'Sair', click: () => { quitting = true; app.quit(); } }
+      { label: `Versão ${app.getVersion()}`, enabled: false },
+      { label: 'Sair do GCP-Remoto', click: () => { quitting = true; app.quit(); } }
     ]);
     tray.setContextMenu(menu);
   }
@@ -433,6 +460,7 @@ app.whenReady().then(() => {
   createTray();
   createMainWindow();
   syncGlobalShortcuts();
+  watchForUpdate();
   applyAutostart(!!store.get('general').startWithSystem);
 });
 

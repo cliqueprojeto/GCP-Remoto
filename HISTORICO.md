@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 1.0.1
+
+- Atualizações aplicadas com o programa aberto na bandeja: o GCP-Remoto percebe que foi atualizado e reinicia sozinho quando não há sessão em andamento.
+- Widget de apresentação em janela própria, que nunca cobre a tela; a camada de desenho deixa os cliques passarem e Esc ou o botão direito devolvem o mouse.
+- Linux: janelas pelo X11/XWayland, mais estáveis no KDE Plasma e no GNOME.
+- Atalhos simples por padrão: Alt+1 a Alt+8 para as ferramentas, Alt+0 para limpar, Ctrl+Alt+S/H/C/W para os efeitos.
+- Novo ícone, janela "Apoie o projeto" com PIX e Stripe, e versão exibida no menu da bandeja.
+
 ## 1.0.0
 
 Primeira versão pública.

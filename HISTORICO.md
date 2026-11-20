@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 1.0.2
+
+- Instalador do Windows em um clique: instala sem perguntas e abre o programa.
+- AppImage que se instala sozinho no menu de aplicativos (Internet) e atualiza a cópia instalada ao abrir uma versão mais nova.
+- Linux: janelas voltam ao modo nativo do sistema; modo de compatibilidade X11 opcional.
+- Wayland: efeitos de cursor locais desativados (o sistema não informa a posição global do cursor), evitando a camada de tela cheia.
+- Registro de diagnóstico e recuperação automática da janela principal.
+
 ## 1.0.1
 
 - Atualizações aplicadas com o programa aberto na bandeja: o GCP-Remoto percebe que foi atualizado e reinicia sozinho quando não há sessão em andamento.

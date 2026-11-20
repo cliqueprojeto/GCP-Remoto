@@ -1,12 +1,12 @@
 # GCP-Remoto
 
-## Novidades 1.0.1
+## Novidades 1.0.2
 
-- **Atualizar ficou automático:** instale a versão nova por cima e o GCP-Remoto, mesmo aberto na bandeja, reinicia sozinho quando não houver sessão em andamento.
-- **Widget de apresentação em janela própria,** que nunca cobre a tela; Esc ou o botão direito sempre devolvem o mouse.
-- **Atalhos simples:** Alt+1 a Alt+8 para as ferramentas de desenho e Ctrl+Alt+S/H/C/W para os efeitos do mouse.
+- **Instalar com dois cliques, sem terminal:** o instalador do Windows instala e já abre o programa; no Linux, o AppImage se instala sozinho no menu de aplicativos (Internet) ao ser aberto.
+- **Janelas no modo nativo do sistema** (Wayland ou X11), com modo de compatibilidade X11 opcional em Configurações › Geral.
+- **Registro de diagnóstico** em Configurações › Sobre, e a janela se recupera sozinha se algo falhar.
 
-Na versão 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
+Na versão 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
 
 **Acesso remoto gratuito, livre e completo, com interface em português.**
 
@@ -30,21 +30,25 @@ Capturas do aplicativo em tema escuro.
 
 ## Baixar
 
-Baixe a versão mais recente na página de [versões publicadas](https://github.com/cliqueprojeto/GCP-Remoto/releases/latest):
+Baixe a versão mais recente na página de [versões publicadas](https://github.com/cliqueprojeto/GCP-Remoto/releases/latest). Todas as opções instalam com dois cliques, sem terminal:
 
-- **GCP-Remoto-Instalador-x.y.z-x64.exe** — instala no Windows 10 e 11 (64 bits) e cria atalhos na área de trabalho e no menu Iniciar.
-- **GCP-Remoto-Portatil-x.y.z-x64.exe** — roda sem instalar, por exemplo a partir de um pendrive. As configurações e os favoritos ficam numa pasta ao lado do executável.
-- **GCP-Remoto-x.y.z-win-x64.zip** — a mesma versão portátil em uma pasta compactada: descompacte e abra `GCP Remoto.exe`.
-- **GCP-Remoto-x.y.z-linux-amd64.deb** — Ubuntu/Debian de 64 bits: instale pelo gerenciador de aplicativos ou com `sudo apt install ./GCP-Remoto-x.y.z-linux-amd64.deb`.
-- **GCP-Remoto-x.y.z-linux-x86_64.rpm** — Fedora e distribuições compatíveis: `sudo dnf install ./GCP-Remoto-x.y.z-linux-x86_64.rpm`.
-- **gcp-remoto-x.y.z-1-x86_64.pkg.tar.zst** — Arch Linux, BigLinux e Manjaro: instale com `sudo pacman -U ./nome-do-pacote.pkg.tar.zst` ou pelo Pamac em **Instalar pacotes locais**. Para atualizar, instale o pacote da versão nova da mesma forma; se o programa estiver aberto na bandeja, ele reinicia sozinho na versão nova.
-- **GCP-Remoto-x.y.z-linux-x86_64.AppImage** — versão portátil Linux: marque o arquivo como executável (`chmod +x arquivo.AppImage`) e abra. Requer FUSE 2; sem FUSE, extraia com `./arquivo.AppImage --appimage-extract` e execute `squashfs-root/AppRun`.
+| Sistema | Arquivo | Como instalar |
+|---|---|---|
+| **Windows 10 e 11** | `GCP-Remoto-Instalador-x.y.z-x64.exe` | Dois cliques: instala e já abre, com atalhos na área de trabalho e no menu Iniciar. |
+| **Windows (sem instalar)** | `GCP-Remoto-Portatil-x.y.z-x64.exe` | Dois cliques e usa. Ideal para pendrive: os dados ficam ao lado do executável. |
+| **Qualquer Linux** (BigLinux, Ubuntu, Fedora…) | `GCP-Remoto-x.y.z-linux-x86_64.AppImage` | Dois cliques (se o sistema perguntar, confirme **Executar**). Ele se instala sozinho no menu de aplicativos, em **Internet**. Abrir uma versão mais nova atualiza a instalada. |
+| **BigLinux, Arch, Manjaro** | `gcp-remoto-x.y.z-1-x86_64.pkg.tar.zst` | Dois cliques abrem o **Pamac** (ou botão direito › Abrir com › Instalar pacotes locais) e clique em **Aplicar**. |
+| **Ubuntu, Debian, Mint, Zorin** | `GCP-Remoto-x.y.z-linux-amd64.deb` | Dois cliques abrem a loja de aplicativos; clique em **Instalar**. |
+| **Fedora, openSUSE** | `GCP-Remoto-x.y.z-linux-x86_64.rpm` | Dois cliques abrem o GNOME Software ou o Discover; clique em **Instalar**. |
+| **Windows (pasta compactada)** | `GCP-Remoto-x.y.z-win-x64.zip` | Descompacte e abra `GCP Remoto.exe`. |
 
 Como o instalador ainda não tem assinatura digital de código, o Windows pode mostrar "O Windows protegeu o computador". Clique em **Mais informações** e depois em **Executar assim mesmo**.
 
-No Linux, o aplicativo aparece em **Internet**. Nenhum programa extra precisa ser instalado: o controle de mouse e teclado, a captura de tela e a digitação com acentos já vêm no pacote.
+**Atualizar:** instale a versão nova por cima, do mesmo jeito. Se o GCP-Remoto estiver aberto na bandeja, ele reinicia sozinho na versão nova quando não houver sessão em andamento.
 
-**Linux com Wayland (BigLinux com KDE Plasma 6, GNOME):** o GCP-Remoto usa o portal do próprio sistema para compartilhar a tela e controlar mouse e teclado. Na primeira sessão, o sistema mostra uma janela pedindo permissão; escolha a tela e confirme. A permissão é lembrada nas próximas vezes.
+**Linux com Wayland (BigLinux com KDE Plasma 6, GNOME):** o GCP-Remoto usa o portal do próprio sistema para compartilhar a tela e controlar mouse e teclado. Na primeira sessão, o sistema mostra uma janela pedindo permissão; escolha a tela e confirme. A permissão é lembrada nas próximas vezes. Se as janelas do app não aparecerem ou não responderem, ative **Configurações › Geral › Modo de compatibilidade X11** e reabra o programa.
+
+O AppImage requer FUSE 2, já presente na maioria das distribuições.
 
 ## Como usar
 

@@ -82,6 +82,7 @@ const DEFAULTS = {
     startWithSystem: false,
     startMinimized: false,
     closeToTray: true,
+    compatX11: false,
     theme: 'system',
     downloadDir: ''
   },

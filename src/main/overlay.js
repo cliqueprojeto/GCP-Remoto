@@ -54,7 +54,8 @@ class OverlayManager {
   layerNeeded() {
     const fx = this.effects();
     const anyFx = fx.cursor.on || fx.clicks.on || fx.spotlight.on;
-    const fxActive = anyFx && ((this.sessionInfo && fx.showDuringSession) || fx.widget.on || this.forceFx);
+    // No Wayland a posição global do cursor não é acessível: efeitos do cursor ficam desativados localmente
+    const fxActive = !isWayland && anyFx && ((this.sessionInfo && fx.showDuringSession) || fx.widget.on || this.forceFx);
     return !!(this.hasShapes || this.tool.tool !== 'pointer' || fxActive || (this.sessionInfo && fx.sessionBanner && !fx.widget.on));
   }
 

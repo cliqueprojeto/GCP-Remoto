@@ -110,6 +110,7 @@
           ${row('Iniciar com o sistema', 'Fica disponível para acesso assim que o computador liga.', toggle('general.startWithSystem', st.general.startWithSystem))}
           ${row('Iniciar minimizado', 'Abre direto na bandeja do sistema.', toggle('general.startMinimized', st.general.startMinimized))}
           ${row('Fechar para a bandeja', 'Continua recebendo conexões com a janela fechada.', toggle('general.closeToTray', st.general.closeToTray))}
+          ${info.platform === 'linux' ? row('Modo de compatibilidade X11', 'Use apenas se as janelas do app não aparecerem ou não responderem. Vale após reiniciar o app.', toggle('general.compatX11', st.general.compatX11)) : ''}
           ${row('Pasta de arquivos recebidos', st.general.downloadDir || 'Downloads/GCP Remoto', `<button class="btn sm" id="pick-dir">${icon('folder')}Escolher</button>`)}
           ${row('Ao conectar, exibir', 'Modo padrão da tela remota.', select('session.viewMode', st.session.viewMode, [['fit', 'Ajustar à janela'], ['original', 'Tamanho original'], ['stretch', 'Esticar']]))}
           ${row('Sincronizar área de transferência', 'Copiar e colar texto entre os computadores.', toggle('session.syncClipboard', st.session.syncClipboard))}`;
@@ -166,6 +167,7 @@
               <p>Conexão ponto a ponto criptografada (WebRTC · DTLS/SRTP).</p>
             </div>
           </div>
+          ${row('Registro de diagnóstico', 'Se algo der errado, este arquivo ajuda a descobrir o motivo.', `<button class="btn sm" id="open-logs">${icon('file')}Abrir pasta</button>`)}
           ${row('Código-fonte', 'github.com/cliqueprojeto/GCP-Remoto', `<button class="btn sm" id="open-gh">${icon('globe')}Abrir</button>`)}
           ${row('Gestão Cultural Pro', 'gestaoculturalpro.com.br', `<button class="btn sm ghost" id="open-support">${icon('heart')}Apoie o projeto</button>`)}`;
         break;
@@ -201,6 +203,7 @@
       if (ok) { await gcp.invoke('settings:new-device-id'); location.reload(); }
     };
     if ($('#srv-default')) $('#srv-default').onclick = async () => { await save('server', { host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs' }); renderSettings(tab, el, ctx); };
+    if ($('#open-logs')) $('#open-logs').onclick = () => gcp.invoke('file:open-logs');
     if ($('#open-gh')) $('#open-gh').onclick = () => gcp.invoke('app:open-external', 'https://github.com/cliqueprojeto/GCP-Remoto');
     if ($('#open-support')) $('#open-support').onclick = () => GSupport.open();
     if ($('#sc-reset')) $('#sc-reset').onclick = async () => { await save('shortcuts', st.defaultShortcuts); renderSettings(tab, el, ctx); };

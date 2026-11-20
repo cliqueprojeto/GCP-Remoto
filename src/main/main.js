@@ -12,6 +12,7 @@ const { InputController, isWayland } = require('./input');
 const { OverlayManager } = require('./overlay');
 const files = require('./files');
 const { NoticeManager } = require('./notices');
+const { integrateAppImage, installedPath } = require('./linux-integration');
 
 // Apoio ao projeto (voluntário)
 const SUPPORT = {
@@ -22,9 +23,20 @@ const SUPPORT = {
 
 // ---------- Flags do Chromium ----------
 app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
-// Linux: janelas pelo X11/XWayland (sobreposições, "sempre por cima" e passagem de cliques
-// funcionam de forma confiável no KDE e no GNOME). Captura e controle no Wayland seguem pelo portal.
-if (process.platform === 'linux' && !process.argv.includes('--ozone-platform=wayland')) app.commandLine.appendSwitch('ozone-platform', 'x11');
+// Linux: modo nativo por padrão (Wayland ou X11, conforme a sessão). O "modo de compatibilidade X11"
+// é opcional (Configurações › Geral) e só é aplicado se houver servidor X disponível.
+function earlyConfig() {
+  try {
+    const dir = process.env.GCP_REMOTO_PROFILE ? path.resolve(process.env.GCP_REMOTO_PROFILE)
+      : process.env.PORTABLE_EXECUTABLE_DIR ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'GCP Remoto - dados')
+      : path.join(app.getPath('appData'), 'GCP Remoto');
+    return JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'));
+  } catch (_) { return {}; }
+}
+if (process.platform === 'linux') {
+  const cfg = earlyConfig();
+  if (cfg.general && cfg.general.compatX11 && process.env.DISPLAY) app.commandLine.appendSwitch('ozone-platform', 'x11');
+}
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -87,6 +99,8 @@ function createMainWindow() {
   });
   mainWin.on('closed', () => { mainWin = null; if (!quitting) app.quit(); });
   mainWin.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  mainWin.webContents.on('console-message', (_e, level, message) => { if (level >= 3) logLine('[interface]', message); });
+  mainWin.webContents.on('did-fail-load', (_e, code, desc) => logLine('[carregamento]', code, desc));
 }
 
 function showMain() {
@@ -174,6 +188,24 @@ function watchForUpdate() {
   }, 15000);
 }
 
+// ---------- Diagnóstico ----------
+function logLine(...parts) {
+  try {
+    const dir = path.join(app.getPath('userData'), 'logs');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'gcp-remoto.log');
+    try { if (fs.statSync(file).size > 2 * 1024 * 1024) fs.renameSync(file, file + '.1'); } catch (_) {}
+    fs.appendFileSync(file, `${new Date().toISOString()} ${parts.map(p => (p && p.stack) || (typeof p === 'object' ? JSON.stringify(p) : String(p))).join(' ')}\n`);
+  } catch (_) {}
+}
+process.on('uncaughtException', (e) => logLine('[erro]', e));
+process.on('unhandledRejection', (e) => logLine('[promessa]', e));
+app.on('render-process-gone', (_e, wc, details) => {
+  logLine('[janela encerrada]', details);
+  if (mainWin && !mainWin.isDestroyed() && wc === mainWin.webContents && details.reason !== 'clean-exit') setTimeout(() => mainWin && mainWin.reload(), 800);
+});
+app.on('child-process-gone', (_e, details) => logLine('[processo]', details));
+
 // ---------- Bandeja ----------
 function trayImage(state) {
   const file = path.join(__dirname, '..', 'renderer', 'assets', `tray-${state}.png`);
@@ -227,7 +259,7 @@ function applyAutostart(enabled) {
   const dir = path.join(os.homedir(), '.config', 'autostart');
   const file = path.join(dir, 'gcp-remoto.desktop');
   if (!enabled) { try { fs.unlinkSync(file); } catch (_) {} return; }
-  const exec = process.env.APPIMAGE || process.execPath;
+  const exec = process.env.APPIMAGE ? installedPath() : process.execPath;
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(file, `[Desktop Entry]\nType=Application\nName=GCP Remoto\nExec="${exec}" --hidden\nIcon=gcp-remoto\nX-GNOME-Autostart-enabled=true\n`);
 }
@@ -406,6 +438,7 @@ function registerIpc() {
   });
   h('file:show', (_e, p) => shell.showItemInFolder(p));
   h('file:open-downloads', () => shell.openPath(downloadsDir()));
+  h('file:open-logs', () => { const d = path.join(app.getPath('userData'), 'logs'); fs.mkdirSync(d, { recursive: true }); shell.openPath(d); });
   h('file:choose-dir', async (e) => {
     const r = await dialog.showOpenDialog(BrowserWindow.fromWebContents(e.sender), { properties: ['openDirectory', 'createDirectory'] });
     return r.canceled ? null : r.filePaths[0];
@@ -457,10 +490,13 @@ app.whenReady().then(() => {
   });
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(['media', 'display-capture', 'clipboard-read', 'clipboard-sanitized-write', 'notifications', 'fullscreen'].includes(perm)));
 
+  logLine('[inicio]', `versão ${app.getVersion()}`, process.platform, process.env.XDG_SESSION_TYPE || '', process.env.APPIMAGE ? 'AppImage' : (app.isPackaged ? 'instalado' : 'desenvolvimento'));
   createTray();
   createMainWindow();
   syncGlobalShortcuts();
   watchForUpdate();
+  const integ = integrateAppImage();
+  if (integ) setTimeout(() => notices.info({ tone: 'ok', icon: 'check', title: integ === 'installed' ? 'GCP-Remoto instalado' : 'GCP-Remoto atualizado', body: integ === 'installed' ? 'Ele já está no menu de aplicativos, em Internet. Pode apagar o arquivo baixado.' : `Versão ${app.getVersion()} instalada no menu de aplicativos.`, ms: 9000 }), 2500);
   applyAutostart(!!store.get('general').startWithSystem);
 });
 

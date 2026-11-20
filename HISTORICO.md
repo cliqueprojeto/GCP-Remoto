@@ -8,6 +8,8 @@
 - Transferência de arquivos mais leve: canal de dados bruto, leitura antecipada e gravação em lotes.
 - Linux com GNOME, Cinnamon e MATE: arquivos copiados no formato que a área de trabalho desses ambientes reconhece.
 - Limpar todos os desenhos agora é Ctrl+0.
+- Desenhos sempre por cima de todas as janelas no computador acessado (antes, no Windows, podiam ficar atrás do Explorer, como se fossem pintados na área de trabalho).
+- Barra da sessão sem sobreposição dos ícones em janelas estreitas.
 
 ## 1.1.0
 

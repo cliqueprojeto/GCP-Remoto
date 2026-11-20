@@ -103,15 +103,34 @@ class OverlayManager {
     this.interactive = false;
   }
 
+  // Mantém a janela acima de todas as outras. No Windows, uma janela "sempre por cima"
+  // que foi escondida e mostrada de novo pode perder essa condição e ficar atrás do Explorer.
+  _raise(win, level = 'screen-saver', rel = 0) {
+    if (!win || win.isDestroyed() || !win.isVisible()) return;
+    win.setAlwaysOnTop(true, level, rel);
+    win.moveTop();
+  }
+
+  _startTopGuard() {
+    if (this.topGuard) return;
+    this.topGuard = setInterval(() => {
+      if (this.layerVisible) this._raise(this.win, 'screen-saver', 0);
+      if (this.widget && !this.widget.isDestroyed() && this.widget.isVisible()) this._raise(this.widget, 'screen-saver', 1);
+      if (!this.layerVisible && !(this.widget && !this.widget.isDestroyed() && this.widget.isVisible())) { clearInterval(this.topGuard); this.topGuard = null; }
+    }, 1500);
+  }
+
   _reveal() {
     const win = this.win; if (!win || win.isDestroyed()) return;
     win.setBounds(this.display().bounds);
     if (!win.isVisible()) win.showInactive();
-    win.moveTop();
+    if (process.platform === 'win32') win.setOpacity(1);
+    this._raise(win, 'screen-saver', 0);
+    this._startTopGuard();
     // No Linux a passagem de cliques precisa ser reaplicada depois que a janela aparece.
     this._applyInteractive();
     setTimeout(() => this._applyInteractive(), 120);
-    if (this.widget && !this.widget.isDestroyed()) this.widget.moveTop();
+    if (this.widget && !this.widget.isDestroyed()) this._raise(this.widget, 'screen-saver', 1);
   }
 
 
@@ -126,7 +145,15 @@ class OverlayManager {
   hideLayer() {
     this.layerVisible = false;
     this._stopTimer();
-    if (this.win && !this.win.isDestroyed()) { this._clickThrough(this.win); this.win.hide(); }
+    if (!this.win || this.win.isDestroyed()) return;
+    this._clickThrough(this.win);
+    if (process.platform === 'win32') {
+      // No Windows, esconder e mostrar de novo faz a janela perder o "sempre por cima" (fica atrás do
+      // Explorer). Em vez de esconder, ela fica transparente, vazia e deixando os cliques passarem.
+      this.win.setOpacity(0);
+    } else {
+      this.win.hide();
+    }
   }
 
   _applyInteractive() {
@@ -188,7 +215,7 @@ class OverlayManager {
 
   // ---------- Widget ----------
   showWidget() {
-    if (this.widget && !this.widget.isDestroyed()) { if (!this.widget.isVisible()) this.widget.showInactive(); return; }
+    if (this.widget && !this.widget.isDestroyed()) { if (!this.widget.isVisible()) this.widget.showInactive(); this._raise(this.widget, 'screen-saver', 1); this._startTopGuard(); return; }
     const fx = this.effects();
     const wa = this.display().workArea;
     const w = 236, h = 64;
@@ -203,7 +230,7 @@ class OverlayManager {
     win.setAlwaysOnTop(true, 'screen-saver', 1);
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.loadFile(this.widgetPage);
-    win.once('ready-to-show', () => { if (!win.isDestroyed()) { win.showInactive(); this.keepOnScreen(); } });
+    win.once('ready-to-show', () => { if (!win.isDestroyed()) { win.showInactive(); this._raise(win, 'screen-saver', 1); this.keepOnScreen(); this._startTopGuard(); } });
     win.webContents.on('did-finish-load', () => this.pushWidget('overlay:state', this.state()));
     let saveT;
     win.on('moved', () => {
@@ -251,7 +278,10 @@ class OverlayManager {
   drawOp(op) {
     if (op && op.a === 'mark') { this.hasShapes = true; return; }   // desenho local já está na camada
     if (op && op.a === 'upsert') this.hasShapes = true;
+    const wasVisible = this.layerVisible;
     this.showLayer();
+    const now = Date.now();
+    if (!wasVisible || (op && op.a === 'upsert' && now - (this.lastRaise || 0) > 500)) { this.lastRaise = now; this._raise(this.win, 'screen-saver', 0); }
     this.push('overlay:op', op);
   }
 

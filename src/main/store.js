@@ -30,7 +30,7 @@ const DEFAULT_SHORTCUTS = {
   toolRect: 'Alt+6',
   toolEllipse: 'Alt+7',
   toolText: 'Alt+8',
-  clearDrawings: 'Alt+0',
+  clearDrawings: 'Ctrl+0',
   undoDrawing: 'Ctrl+Alt+Z',
   redoDrawing: 'Ctrl+Alt+Y',
   // Efeitos do mouse
@@ -120,6 +120,7 @@ class Store {
     if (!this.data.displayName) this.data.displayName = require('os').hostname();
     this.migrateShortcuts();
     this.migrateV3();
+    this.migrateV4();
     this.save();
   }
 
@@ -143,6 +144,13 @@ class Store {
     this.data.session.pointer = this.data.session.pointer || 'dot';
     this.data.session.codec = this.data.session.codec || 'auto';
     this.data.prefsVersion = 3;
+  }
+
+  // Versão 4: limpar desenhos passa para Ctrl+0 (se o atalho não tiver sido personalizado).
+  migrateV4() {
+    if (this.data.prefsVersion >= 4) return;
+    if (!this.data.shortcuts.clearDrawings || this.data.shortcuts.clearDrawings === 'Alt+0') this.data.shortcuts.clearDrawings = 'Ctrl+0';
+    this.data.prefsVersion = 4;
   }
 
   static newDeviceId() {

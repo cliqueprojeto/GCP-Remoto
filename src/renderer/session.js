@@ -178,6 +178,7 @@
       case 'screen-changed': S.screen = m.id; buildScreensMenu(); break;
       case 'effects': S.effects = m.effects; buildFxMenu(); break;
       case 'fs-list': onRemoteList(m); break;
+      case 'clip-files': onRemoteClipFiles(m); break;
       case 'bye': fail('Sessão encerrada', m.reason || 'O computador remoto encerrou a sessão.'); break;
     }
   }
@@ -192,7 +193,7 @@
       await gcp.invoke('session:save-favorite', { id: S.params.id, name: $('#pw-name').value.trim() || S.hello.name, password: S.typedPassword });
       toast('Salvo nos favoritos — da próxima vez é só um clique.', 'ok');
     }
-    S.filesConn = S.peer.connect(PEER_PREFIX + S.params.id, { label: 'files', reliable: true, serialization: 'binary', metadata: { token: S.token } });
+    S.filesConn = S.peer.connect(PEER_PREFIX + S.params.id, { label: 'files', reliable: true, serialization: 'raw', metadata: { token: S.token } });
     // canal rápido para o mouse: sem ordem garantida (movimentos antigos não seguram os novos)
     S.inputConn = S.peer.connect(PEER_PREFIX + S.params.id, { label: 'input', reliable: false, serialization: 'json', metadata: { token: S.token } });
     S.moveSeq = 0;
@@ -726,14 +727,26 @@
     getConn: () => S.filesConn,
     onProgress: (p) => renderXfer(p),
     onDone: (offer, paths) => {
-      if (offer.purpose === 'clip') toast(`${paths.length} item(ns) copiados do remoto — cole com Ctrl+V em qualquer pasta deste computador.`, 'ok', 6000);
+      if (offer.purpose === 'clip') toast('Pronto para colar: use Ctrl+V em qualquer pasta deste computador.', 'ok', 4000);
       else { const t = toast(`Recebido: ${paths.length} item(ns). Clique para abrir.`, 'ok', 6000); t.style.cursor = 'pointer'; t.onclick = () => gcp.invoke('file:show', paths[0]); if (!$('#p-files').classList.contains('hidden')) loadLocal(localDir); }
     },
     onError: (e) => toast(e.message, 'error')
   });
 
   const xrows = new Map();
+  // Arquivos copiados no computador remoto: vêm na hora (até 1 GB) ou após confirmação
+  const CLIP_AUTO_LIMIT = 1024 * 1024 * 1024;
+  async function onRemoteClipFiles(m) {
+    if (!S.remotePerms.files) return;
+    const what = m.top.length === 1 ? `“${m.top[0]}”` : `${m.count} arquivo(s)`;
+    if (m.total <= CLIP_AUTO_LIMIT) { send({ t: 'clip-get' }); return; }
+    gcp.invoke('notice:info', { tone: 'info', icon: 'clipboard', title: 'Arquivos grandes copiados no remoto', body: `${what} · ${fmtBytes(m.total)}. Confirme na janela da sessão para copiar.`, ms: 10000 });
+    const ok = await GUI.modal({ title: 'Copiar do computador remoto?', body: `<p>${esc(what)} — ${fmtBytes(m.total)}.</p><p>Depois de copiar, cole com Ctrl+V em qualquer pasta deste computador.</p>`, actions: [{ label: 'Agora não', value: false }, { label: 'Copiar', kind: 'primary', value: true }] });
+    if (ok) send({ t: 'clip-get' });
+  }
+
   function renderXfer(p) {
+    gcp.invoke('notice:progress', p.tid, GProto.progressNotice(p, S.hello ? S.hello.name : S.params.name, 'client'));
     let row = xrows.get(p.tid);
     if (!row) { row = document.createElement('div'); row.className = 'xrow'; $('#xlist').prepend(row); xrows.set(p.tid, row); }
     const pct = p.total ? Math.round((p.done / p.total) * 100) : 100;
@@ -804,6 +817,7 @@
   });
 
   gcp.on('settings:changed', async () => { S.settings = await gcp.invoke('settings:get'); buildMenus(); });
+  gcp.on('xfer:cancel', (tid) => transfers.cancel(tid));
   window.addEventListener('beforeunload', () => { releaseKeys(); send({ t: 'bye' }); });
 
   init();

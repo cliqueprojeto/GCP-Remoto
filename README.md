@@ -1,12 +1,12 @@
 # GCP-Remoto
 
-## Novidades 1.1.0
+## Novidades 1.2.0
 
-- **Quase em tempo real:** vídeo sem buffer de espera, codificação pela placa de vídeo quando disponível e perfil "Velocidade", que mantém o movimento fluido mesmo com internet fraca.
-- **Mouse preciso, sem ponteiro duplicado:** canal próprio para os movimentos e ponteiro local em forma de ponto, exatamente onde o clique vai cair.
-- **Teste de conexão** com recomendações automáticas e **atualizações pelo GitHub** direto nas Configurações, em todos os sistemas.
+- **Ctrl+C no computador remoto, Ctrl+V aqui:** copie arquivos de qualquer jeito no outro computador (teclado, botão direito, Explorer, Dolphin, área de trabalho) e cole com Ctrl+V em qualquer pasta, com janela de progresso sempre visível.
+- **Colar na Área de Trabalho** com um clique ao final da cópia, em qualquer sistema.
+- **Ctrl+0** limpa todos os desenhos.
 
-Na versão 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
+Na versão 1.1.0: desempenho quase em tempo real, ponteiro preciso, teste de conexão e atualizações pelo GitHub. Na 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
 
 **Acesso remoto gratuito, livre e completo, com interface em português.**
 
@@ -108,6 +108,8 @@ O AppImage requer FUSE 2, já presente na maioria das distribuições.
 
 ### Transferir arquivos
 - **Ctrl+C neste computador e Ctrl+V na tela remota**, e o contrário, para arquivos e pastas inteiras.
+- Arquivos copiados no computador remoto (Ctrl+C, botão direito › Copiar, em qualquer gerenciador ou na área de trabalho) chegam prontos para colar aqui; até 1 GB a cópia começa na hora, acima disso o programa pergunta.
+- Janela de progresso sempre por cima, com porcentagem, velocidade, tempo restante e Cancelar; ao terminar, **Colar na Área de Trabalho** ou **Abrir pasta**.
 - Gerenciador com os dois computadores lado a lado: navegar, enviar e baixar.
 - Arrastar e soltar arquivos sobre a tela remota.
 - Arquivos recebidos ficam em Downloads › GCP Remoto (a pasta pode ser escolhida nas Configurações).

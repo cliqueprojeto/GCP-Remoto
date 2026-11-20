@@ -35,7 +35,7 @@
           <span class="wsep"></span>
           <button class="wb" data-action="undoDrawing" title="Desfazer (Ctrl+Alt+Z)">${icon('undo')}</button>
           <button class="wb" data-action="redoDrawing" title="Refazer (Ctrl+Alt+Y)">${icon('redo')}</button>
-          <button class="wb" data-action="clearDrawings" title="Limpar desenhos (Alt+0)">${icon('trash')}</button>
+          <button class="wb" data-action="clearDrawings" title="Limpar desenhos (Ctrl+0)">${icon('trash')}</button>
           <span class="wsep"></span>
           <button class="wb ${fx.cursor.on ? 'active' : ''}" data-fx="cursor" title="Destaque do cursor (Ctrl+Alt+H)">${icon('cursorFx')}</button>
           <button class="wb ${fx.clicks.on ? 'active' : ''}" data-fx="clicks" title="Efeito de clique (Ctrl+Alt+C)">${icon('clickFx')}</button>

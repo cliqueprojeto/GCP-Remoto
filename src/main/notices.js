@@ -78,6 +78,36 @@ class NoticeManager {
     return w;
   }
 
+  // Janela de progresso (cópia de arquivos), atualizada ao vivo e sempre por cima.
+  progress(id, payload, owner) {
+    this.progs = this.progs || new Map();
+    let entry = this.progs.get(id);
+    if (!entry || entry.win.isDestroyed()) {
+      const wa = screen.getPrimaryDisplay().workArea;
+      const width = 460, height = 170;
+      const win = this._create({ kind: 'progress', id, ...payload }, { width, height, x: wa.x + wa.width - width - 16, y: wa.y + wa.height - height - 16, focus: false });
+      entry = { win, owner };
+      this.progs.set(id, entry);
+      this.infos.push(win);
+      this.layoutInfos();
+      win.on('closed', () => this.progs.delete(id));
+      return;
+    }
+    entry.owner = owner || entry.owner;
+    if (!entry.win.webContents.isLoading()) entry.win.webContents.send('notice:update', payload);
+    this.data.set(entry.win.webContents.id, { kind: 'progress', id, ...payload });
+  }
+
+  progressData(id) {
+    const entry = this.progs && this.progs.get(id);
+    return entry && !entry.win.isDestroyed() ? this.data.get(entry.win.webContents.id) : null;
+  }
+
+  cancelProgress(id) {
+    const entry = this.progs && this.progs.get(id);
+    if (entry && entry.owner && !entry.owner.isDestroyed()) entry.owner.send('xfer:cancel', id);
+  }
+
   layoutInfos() {
     const wa = screen.getPrimaryDisplay().workArea;
     let y = wa.y + wa.height - 16;

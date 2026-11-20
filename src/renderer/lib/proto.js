@@ -3,7 +3,17 @@
   'use strict';
   const PEER_PREFIX = 'gcpremoto-';
   const PROTO_VERSION = 1;
-  const CHUNK = 64 * 1024;
+  const CHUNK = 128 * 1024;
+  // Canal de arquivos em modo bruto (sem empacotamento do PeerJS): controle em JSON (texto)
+  // e dados em blocos binários com 16 bytes de cabeçalho (identificador da transferência).
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  function sendCtl(conn, obj) { conn.send(JSON.stringify(obj)); }
+  function sendData(conn, tid, u8) {
+    const out = new Uint8Array(16 + u8.byteLength);
+    out.set(enc.encode(String(tid).padEnd(16, ' ').slice(0, 16)), 0);
+    out.set(u8, 16);
+    conn.send(out.buffer);
+  }
 
   async function sha256hex(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -55,7 +65,7 @@
 
     async waitDrain(conn) {
       const dc = conn.dataChannel;
-      while ((dc && dc.bufferedAmount > 4 * 1024 * 1024) || (conn.bufferSize || 0) > 64) {
+      while ((dc && dc.bufferedAmount > 8 * 1024 * 1024) || (conn.bufferSize || 0) > 64) {
         await new Promise(r => setTimeout(r, 15));
         if (!conn.open) throw new Error('conexão encerrada');
       }
@@ -68,70 +78,105 @@
       if (!scan.items.length) throw new Error('Nada para enviar');
       const tid = GDraw.uid();
       const label = scan.top.length === 1 ? scan.top[0] : `${scan.top.length} itens`;
-      conn.send({ t: 'fx-offer', tid, top: scan.top, count: scan.items.length, total: scan.total, purpose: opts.purpose || 'send', dest: opts.dest || null, pasteAfter: !!opts.pasteAfter });
+      sendCtl(conn, { t: 'fx-offer', tid, top: scan.top, count: scan.items.length, total: scan.total, purpose: opts.purpose || 'send', dest: opts.dest || null, pasteAfter: !!opts.pasteAfter });
       let done = 0;
-      this.onProgress({ tid, dir: 'out', label, done, total: scan.total, state: 'run' });
+      const purpose = opts.purpose || 'send';
+      this.onProgress({ tid, dir: 'out', label, done, total: scan.total, state: 'run', purpose });
       let last = 0;
       try {
         for (const it of scan.items) {
           if (this.cancelled.has(tid)) throw new Error('cancelado');
-          conn.send({ t: 'fx-file', tid, rel: it.rel, dir: it.dir });
+          sendCtl(conn, { t: 'fx-file', tid, rel: it.rel, dir: it.dir });
           if (it.dir) continue;
-          for (let off = 0; off < it.size; off += CHUNK) {
+          const READ = 1024 * 1024;
+          let next = it.size > 0 ? gcp.invoke('files:read', it.abs, 0, READ) : null;
+          for (let off = 0; off < it.size; off += READ) {
             if (this.cancelled.has(tid)) throw new Error('cancelado');
-            const data = await gcp.invoke('files:read', it.abs, off, CHUNK);
-            await this.waitDrain(conn);
-            conn.send({ t: 'fx-data', tid, d: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) });
+            const big = await next;
+            next = off + READ < it.size ? gcp.invoke('files:read', it.abs, off + READ, READ) : null; // lê o próximo enquanto envia este
+            for (let o = 0; o < big.byteLength; o += CHUNK) {
+              await this.waitDrain(conn);
+              sendData(conn, tid, big.subarray(o, Math.min(o + CHUNK, big.byteLength)));
+            }
+            const data = big;
             done += data.byteLength;
             const now = performance.now();
-            if (now - last > 120) { last = now; this.onProgress({ tid, dir: 'out', label, done, total: scan.total, state: 'run' }); }
+            if (now - last > 120) { last = now; this.onProgress({ tid, dir: 'out', label, done, total: scan.total, state: 'run', purpose }); }
           }
         }
-        conn.send({ t: 'fx-end', tid });
-        this.onProgress({ tid, dir: 'out', label, done: scan.total, total: scan.total, state: 'done' });
+        sendCtl(conn, { t: 'fx-end', tid });
+        this.onProgress({ tid, dir: 'out', label, done: scan.total, total: scan.total, state: 'done', purpose });
         return tid;
       } catch (e) {
-        try { conn.send({ t: 'fx-abort', tid }); } catch (_) {}
-        this.onProgress({ tid, dir: 'out', label, done, total: scan.total, state: 'error', error: e.message });
+        try { sendCtl(conn, { t: 'fx-abort', tid }); } catch (_) {}
+        this.onProgress({ tid, dir: 'out', label, done, total: scan.total, state: 'error', error: e.message, purpose: opts.purpose || 'send' });
         throw e;
       }
     }
 
-    cancel(tid) { this.cancelled.add(tid); const inc = this.incoming.get(tid); if (inc) inc.aborted = true; }
+    cancel(tid) {
+      this.cancelled.add(tid);
+      const inc = this.incoming.get(tid);
+      if (inc) {
+        // quem recebe cancela: avisa quem envia e descarta o que já chegou
+        inc.aborted = true;
+        try { this.getConn() && sendCtl(this.getConn(), { t: 'fx-cancel', tid }); } catch (_) {}
+        inc.chain.then(() => gcp.invoke('xfer:end', tid, { abort: true }));
+        this.incoming.delete(tid);
+        this.onProgress({ tid, dir: 'in', label: inc.label, done: inc.done, total: inc.offer.total, state: 'error', error: 'Cópia cancelada.', purpose: inc.offer.purpose });
+      }
+    }
+
+    flushWrite(tid, inc) {
+      if (!inc.pend || !inc.pend.length) return;
+      const buf = new Uint8Array(inc.pendLen);
+      let o = 0; for (const p of inc.pend) { buf.set(p, o); o += p.byteLength; }
+      inc.pend = []; inc.pendLen = 0;
+      inc.chain = inc.chain.then(() => gcp.invoke('xfer:write', tid, buf));
+    }
 
     handle(msg) {
+      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (_) { return false; } }
+      else if (msg instanceof ArrayBuffer || ArrayBuffer.isView(msg)) {
+        const u8 = msg instanceof ArrayBuffer ? new Uint8Array(msg) : new Uint8Array(msg.buffer, msg.byteOffset, msg.byteLength);
+        msg = { t: 'fx-data', tid: dec.decode(u8.subarray(0, 16)).trim(), d: u8.subarray(16) };
+      }
+      if (!msg || typeof msg !== 'object') return false;
       switch (msg.t) {
         case 'fx-offer': {
-          if (!this.canReceive(msg)) { this.getConn()?.send({ t: 'fx-reject', tid: msg.tid }); return true; }
+          if (!this.canReceive(msg)) { const c = this.getConn(); if (c) sendCtl(c, { t: 'fx-reject', tid: msg.tid }); return true; }
           const label = msg.top.length === 1 ? msg.top[0] : `${msg.top.length} itens`;
           const inc = { offer: msg, label, done: 0, chain: Promise.resolve(), last: 0 };
           const dest = msg.purpose === 'clip' ? null : ((this.acceptDest && msg.dest) || this.defaultDest || null);
           inc.chain = gcp.invoke('xfer:begin', msg.tid, { purpose: msg.purpose, dest, top: msg.top })
             .catch(e => { inc.aborted = true; this.onError(e); });
           this.incoming.set(msg.tid, inc);
-          this.onProgress({ tid: msg.tid, dir: 'in', label, done: 0, total: msg.total, state: 'run' });
+          this.onProgress({ tid: msg.tid, dir: 'in', label, done: 0, total: msg.total, state: 'run', purpose: msg.purpose });
           return true;
         }
         case 'fx-file': {
           const inc = this.incoming.get(msg.tid); if (!inc || inc.aborted) return true;
+          this.flushWrite(msg.tid, inc);
           inc.chain = inc.chain.then(() => gcp.invoke('xfer:open', msg.tid, msg.rel, msg.dir));
           return true;
         }
         case 'fx-data': {
           const inc = this.incoming.get(msg.tid); if (!inc || inc.aborted) return true;
-          const d = new Uint8Array(msg.d);
+          const d = msg.d instanceof Uint8Array ? msg.d.slice() : new Uint8Array(msg.d);
           inc.done += d.byteLength;
-          inc.chain = inc.chain.then(() => gcp.invoke('xfer:write', msg.tid, d));
+          inc.pend = inc.pend || []; inc.pendLen = (inc.pendLen || 0) + d.byteLength; inc.pend.push(d);
+          if (inc.pendLen >= 1024 * 1024) this.flushWrite(msg.tid, inc);
           const now = performance.now();
-          if (now - inc.last > 120) { inc.last = now; this.onProgress({ tid: msg.tid, dir: 'in', label: inc.label, done: inc.done, total: inc.offer.total, state: 'run' }); }
+          if (now - inc.last > 120) { inc.last = now; this.onProgress({ tid: msg.tid, dir: 'in', label: inc.label, done: inc.done, total: inc.offer.total, state: 'run', purpose: inc.offer.purpose }); }
           return true;
         }
         case 'fx-end': {
           const inc = this.incoming.get(msg.tid); if (!inc) return true;
+          this.flushWrite(msg.tid, inc);
           inc.chain.then(() => gcp.invoke('xfer:end', msg.tid, { toClipboard: inc.offer.purpose === 'clip' }))
             .then(paths => {
               this.incoming.delete(msg.tid);
-              this.onProgress({ tid: msg.tid, dir: 'in', label: inc.label, done: inc.offer.total, total: inc.offer.total, state: 'done', paths });
+              this.onProgress({ tid: msg.tid, dir: 'in', label: inc.label, done: inc.offer.total, total: inc.offer.total, state: 'done', paths, purpose: inc.offer.purpose });
               this.onDone(inc.offer, paths || []);
             })
             .catch(e => this.onError(e));
@@ -142,9 +187,12 @@
           inc.aborted = true;
           inc.chain.then(() => gcp.invoke('xfer:end', msg.tid, {}));
           this.incoming.delete(msg.tid);
-          this.onProgress({ tid: msg.tid, dir: 'in', label: inc.label, done: inc.done, total: inc.offer.total, state: 'error', error: 'cancelado' });
+          this.onProgress({ tid: msg.tid, dir: 'in', label: inc.label, done: inc.done, total: inc.offer.total, state: 'error', error: 'Cópia cancelada.', purpose: inc.offer.purpose });
           return true;
         }
+        case 'fx-cancel':
+          this.cancelled.add(msg.tid);
+          return true;
         case 'fx-reject':
           this.cancel(msg.tid);
           this.onError(new Error('O outro computador recusou a transferência de arquivos.'));
@@ -191,5 +239,32 @@
     return out.join('\r\n');
   }
 
-  root.GProto = { PEER_PREFIX, PROTO_VERSION, sha256hex, makeProof, peerOptions, fmtBytes, formatId, osName, Transfers, hardwareCodecs, tuneSdp, cachedHw: null };
+  // Monta os textos da janela de progresso para cada situação
+  const xferClock = new Map();
+  function progressNotice(p, otherName, side) {
+    const now = performance.now();
+    let c = xferClock.get(p.tid);
+    if (!c) { c = { t0: now, d0: p.done, lastT: now, lastD: p.done, speed: 0 }; xferClock.set(p.tid, c); }
+    if (now - c.lastT > 400) { const inst = (p.done - c.lastD) / ((now - c.lastT) / 1000); c.speed = c.speed ? c.speed * 0.6 + inst * 0.4 : inst; c.lastT = now; c.lastD = p.done; }
+    const eta = c.speed > 1 && p.total ? (p.total - p.done) / c.speed : 0;
+    if (p.state !== 'run') xferClock.delete(p.tid);
+    const other = otherName || 'computador remoto';
+    let title, doneTitle, doneText;
+    if (p.purpose === 'clip' && p.dir === 'in') {
+      title = side === 'host' ? `Recebendo para colar aqui (de ${other})` : `Copiando de ${other}`;
+      doneTitle = side === 'host' ? 'Colado' : 'Pronto para colar';
+      doneText = side === 'host' ? 'Os arquivos foram colados neste computador.' : 'Cole com Ctrl+V em qualquer pasta deste computador.';
+    } else if (p.purpose === 'clip') {
+      title = `Enviando para colar em ${other}`; doneTitle = 'Colado no computador remoto'; doneText = 'Os arquivos já estão na pasta aberta do outro computador.';
+    } else if (p.dir === 'in') {
+      title = `Recebendo de ${other}`; doneTitle = 'Arquivos recebidos'; doneText = 'Salvos em Downloads › GCP Remoto.';
+    } else {
+      title = `Enviando para ${other}`; doneTitle = 'Arquivos enviados'; doneText = 'Transferência concluída.';
+    }
+    const canDesktop = p.state === 'done' && p.dir === 'in' && side === 'client' && Array.isArray(p.paths) && p.paths.length > 0;
+    if (canDesktop && p.purpose === 'clip') doneText = 'Cole com Ctrl+V em qualquer pasta, ou envie direto para a Área de Trabalho.';
+    return { dir: p.dir, label: p.label, done: p.done, total: p.total, state: p.state, error: p.error, speed: Math.round(c.speed), eta: Math.round(eta), title, doneTitle, doneText, paths: canDesktop ? p.paths : null, canDesktop };
+  }
+
+  root.GProto = { PEER_PREFIX, PROTO_VERSION, sha256hex, makeProof, peerOptions, fmtBytes, formatId, osName, Transfers, hardwareCodecs, tuneSdp, progressNotice, cachedHw: null };
 })(window);

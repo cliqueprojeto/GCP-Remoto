@@ -412,6 +412,12 @@ function registerIpc() {
 
   // ---- Transferência de arquivos ----
   h('files:clipboard-read', () => files.readClipboardFiles());
+  h('files:clip-watch', (e, on) => {
+    if (!on) { files.stopClipWatch(); return true; }
+    const wc = e.sender;
+    files.startClipWatch((paths) => { if (!wc.isDestroyed()) wc.send('files:clip-changed', paths); });
+    return true;
+  });
   h('files:clipboard-write', (_e, paths) => files.writeClipboardFiles(paths));
   h('files:scan', (_e, paths) => files.scan(paths));
   h('files:pick', async (e, dirs) => {
@@ -482,6 +488,27 @@ function registerIpc() {
   h('update:page', () => shell.openExternal('https://github.com/cliqueprojeto/GCP-Remoto/releases/latest'));
   h('notice:request', (_e, payload) => notices.request(payload));
   h('notice:info', (_e, payload) => { notices.info(payload); return true; });
+  h('notice:progress', (e, id, payload) => { notices.progress(String(id), payload, e.sender); return true; });
+  h('notice:cancel', (_e, id) => { notices.cancelProgress(String(id)); return true; });
+  h('notice:action', (_e, id, action) => {
+    const d = notices.progressData(String(id));
+    const paths = (d && d.paths) || [];
+    if (!paths.length) return { ok: false };
+    if (action === 'folder') { shell.showItemInFolder(paths[0]); return { ok: true }; }
+    if (action === 'desktop') {
+      const desk = app.getPath('desktop');
+      const placed = [];
+      for (const src of paths) {
+        const name = path.basename(src), ext = path.extname(name), base = name.slice(0, name.length - ext.length);
+        let dest = path.join(desk, name);
+        for (let n = 1; fs.existsSync(dest); n++) dest = path.join(desk, `${base} (${n})${ext}`);
+        fs.cpSync(src, dest, { recursive: true });
+        placed.push(dest);
+      }
+      return { ok: true, placed };
+    }
+    return { ok: false };
+  });
   h('tray:status', (_e, text) => { if (tray) tray.setToolTip(`GCP Remoto — ${text}`); });
 }
 

@@ -45,8 +45,14 @@ async function writeClipboardFiles(paths) {
     return true;
   }
   const uris = paths.map(p => 'file://' + p.split('/').map(encodeURIComponent).join('/'));
-  // KDE/Dolphin e GNOME Files aceitam text/uri-list para colar arquivos.
-  clipboard.writeBuffer('text/uri-list', Buffer.from(uris.join('\r\n') + '\r\n', 'utf8'));
+  // KDE/Dolphin e GNOME Files aceitam text/uri-list para colar arquivos. Em ambientes GNOME,
+  // a área de trabalho (e o Nautilus) preferem x-special/gnome-copied-files.
+  const desktop = (process.env.XDG_CURRENT_DESKTOP || '').toUpperCase();
+  if (/GNOME|UNITY|CINNAMON|MATE|BUDGIE|PANTHEON/.test(desktop)) {
+    clipboard.writeBuffer('x-special/gnome-copied-files', Buffer.from('copy\n' + uris.join('\n'), 'utf8'));
+  } else {
+    clipboard.writeBuffer('text/uri-list', Buffer.from(uris.join('\r\n') + '\r\n', 'utf8'));
+  }
   return true;
 }
 
@@ -146,6 +152,46 @@ function listDir(dir) {
   return { path: dir, parent, entries, sep: path.sep, home: os.homedir() };
 }
 
+// Observa cópias de ARQUIVOS (Ctrl+C, botão direito › Copiar, qualquer gerenciador).
+//  Windows: um único PowerShell em laço (leve), sem abrir processos a cada verificação.
+//  Linux: compara o conteúdo text/uri-list da área de transferência.
+let clipWatch = null;
+function startClipWatch(cb) {
+  stopClipWatch();
+  if (process.platform === 'win32') {
+    const script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Add-Type -AssemblyName System.Windows.Forms; $last=$null; while ($true) { try { $l = [Windows.Forms.Clipboard]::GetFileDropList(); $s = ($l -join '|') } catch { $s = $last }; if ($s -ne $last) { $last = $s; [Console]::Out.WriteLine('GCPFILES:' + $s); [Console]::Out.Flush() }; Start-Sleep -Milliseconds 700 }";
+    const { spawn } = require('child_process');
+    const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-STA', '-Command', script], { windowsHide: true });
+    let buf = '';
+    ps.stdout.on('data', (d) => {
+      buf += d.toString('utf8');
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (line.startsWith('GCPFILES:')) cb(line.slice(9).split('|').map(s => s.trim()).filter(p => p && fs.existsSync(p)));
+      }
+    });
+    ps.on('error', () => {});
+    clipWatch = { stop: () => { try { ps.kill(); } catch (_) {} } };
+    return;
+  }
+  let last = null;
+  const tick = async () => {
+    let sig = '';
+    try {
+      const f = clipboard.availableFormats();
+      const fmt = f.find(x => x === 'text/uri-list') || f.find(x => x === 'x-special/gnome-copied-files');
+      sig = fmt ? clipboard.readBuffer(fmt).toString('utf8') : (/^file:\/\//m.test(clipboard.readText()) ? clipboard.readText() : '');
+    } catch (_) {}
+    if (sig === last) return;
+    last = sig;
+    cb(sig ? await readClipboardFiles() : []);
+  };
+  const t = setInterval(tick, 700); tick();
+  clipWatch = { stop: () => clearInterval(t) };
+}
+function stopClipWatch() { if (clipWatch) clipWatch.stop(); clipWatch = null; }
+
 function tempClipDir(tid) { return path.join(app.getPath('temp'), 'gcp-remoto-clip', String(tid)); }
 
-module.exports = { readClipboardFiles, writeClipboardFiles, scan, Receiver, readChunk, listDir, tempClipDir };
+module.exports = { readClipboardFiles, writeClipboardFiles, scan, Receiver, readChunk, listDir, tempClipDir, startClipWatch, stopClipWatch };

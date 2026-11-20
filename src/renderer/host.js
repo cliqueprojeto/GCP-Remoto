@@ -16,6 +16,8 @@
       this.info = await gcp.invoke('app:info');
       this.settings = await gcp.invoke('settings:get');
       GProto.hardwareCodecs().catch(() => {});
+      gcp.on('files:clip-changed', (paths) => this.onClipFiles(paths));
+      gcp.on('xfer:cancel', (tid) => { if (this.session) this.session.transfers.cancel(tid); });
       this.connectPeer();
       window.addEventListener('online', () => { if (!this.peer || this.peer.disconnected) this.reconnect(0); });
     },
@@ -136,8 +138,9 @@
         getConn: () => s.filesConn,
         canReceive: () => s.perms.files,
         acceptDest: true,
-        onProgress: (p) => this.emit('xfer', p),
+        onProgress: (p) => { this.emit('xfer', p); if (p.dir === 'in') gcp.invoke('notice:progress', p.tid, GProto.progressNotice(p, who.name, 'host')); },
         onDone: (offer, paths) => {
+          if (offer.purpose === 'clip') s.ignoreClip = paths.join('|');
           if (offer.purpose === 'clip' && offer.pasteAfter && s.perms.control) {
             setTimeout(() => gcp.send('input:event', { t: 'combo', codes: [this.info.platform === 'darwin' ? 'MetaLeft' : 'ControlLeft', 'KeyV'] }), 150);
           } else if (offer.purpose !== 'clip') {
@@ -180,6 +183,8 @@
       if (s.screen) gcp.invoke('overlay:display', s.screen.displayId);
       gcp.invoke('tray:status', `sessão ativa com ${who.name}`);
       s.clipTimer = setInterval(() => this.pollClipboard(), 900);
+      s.clipBaseline = false;
+      gcp.invoke('files:clip-watch', true);
       gcp.invoke('notice:info', { tone: 'ok', icon: 'remote', title: 'Sessão remota iniciada', body: `${who.name} está acessando este computador.`, meta: [who.osLabel || GProto.osName(who.os), kind === 'permanent' ? 'senha fixa' : kind === 'request' ? 'aceito por você' : 'senha da sessão'] });
       this.emit('session', s);
     },
@@ -292,7 +297,6 @@
           if (!s.perms.control || s.paused) return;
           if (m.x != null) m.d = s.screen && s.screen.displayId;
           gcp.send('input:event', m);
-          if (m.t === 'kd' && (m.code === 'KeyC' || m.code === 'KeyX') && m.ctrl) setTimeout(() => this.checkClipboardFiles(), 450);
           break;
         case 'draw':
           if (s.perms.drawing) gcp.send('overlay:op', { ...m.op, by: 'remote' });
@@ -326,6 +330,9 @@
           if (!s.perms.files) return;
           s.transfers.send((m.paths || []).map(String), { purpose: 'send' }).catch(e => s.conn.send({ t: 'notice', message: e.message }));
           break;
+        case 'clip-get':
+          if (s.perms.files && s.clipPaths && s.clipPaths.length) s.transfers.send(s.clipPaths, { purpose: 'clip' }).catch(e => s.conn.send({ t: 'notice', message: e.message }));
+          break;
         case 'ping':
           s.conn.send({ t: 'pong', ts: m.ts });
           break;
@@ -342,6 +349,19 @@
         const text = await gcp.invoke('clipboard:read');
         if (text && text !== s.lastClip) { s.lastClip = text; if (text.length < 1_000_000) s.conn.send({ t: 'clip', text }); }
       } finally { s.polling = false; }
+    },
+
+    // Arquivos copiados neste computador (qualquer forma de copiar) ficam disponíveis para colar do outro lado
+    async onClipFiles(paths) {
+      const s = this.session; if (!s) return;
+      const key = paths.join('|');
+      if (!s.clipBaseline) { s.clipBaseline = true; s.lastClipFiles = key; return; } // o que já estava copiado antes da sessão não é enviado
+      if (key === s.lastClipFiles) return;
+      s.lastClipFiles = key;
+      if (!paths.length || key === s.ignoreClip || !s.perms.files) return;
+      const scan = await gcp.invoke('files:scan', paths);
+      s.clipPaths = paths;
+      s.conn.send({ t: 'clip-files', count: scan.items.filter(i => !i.dir).length, total: scan.total, top: scan.top.slice(0, 20) });
     },
 
     async checkClipboardFiles() {
@@ -376,6 +396,7 @@
       const s = this.session; if (!s) return;
       this.session = null;
       clearInterval(s.clipTimer);
+      gcp.invoke('files:clip-watch', false);
       try { s.conn.send({ t: 'bye', reason: 'Sessão encerrada pelo computador acessado.' }); } catch (_) {}
       setTimeout(() => { try { s.conn.close(); } catch (_) {} try { s.filesConn && s.filesConn.close(); } catch (_) {} }, 300);
       try { s.call && s.call.close(); } catch (_) {}

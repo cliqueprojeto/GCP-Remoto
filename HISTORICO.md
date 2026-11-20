@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 1.2.0
+
+- Ctrl+C / Ctrl+V direto: arquivos copiados no computador remoto, de qualquer forma (Ctrl+C, botão direito › Copiar, no Explorer, no Dolphin ou na área de trabalho), ficam prontos para colar com Ctrl+V neste computador. Até 1 GB a cópia começa na hora; acima disso, o programa pergunta antes.
+- Janela de progresso sempre visível, mesmo fora da sessão: nome, porcentagem, velocidade, tempo restante e botão Cancelar.
+- Ao terminar: "Colar na Área de Trabalho" (coloca os arquivos direto na Área de Trabalho, em qualquer sistema) e "Abrir pasta".
+- Transferência de arquivos mais leve: canal de dados bruto, leitura antecipada e gravação em lotes.
+- Linux com GNOME, Cinnamon e MATE: arquivos copiados no formato que a área de trabalho desses ambientes reconhece.
+- Limpar todos os desenhos agora é Ctrl+0.
+
 ## 1.1.0
 
 - Desempenho quase em tempo real: exibição sem buffer de espera (jitter buffer zero), codificação de vídeo por hardware (H.264) quando disponível, perfil "Velocidade" que preserva a fluidez quando a rede aperta e transmissão que já começa em resolução cheia.
@@ -22,7 +31,7 @@
 - Atualizações aplicadas com o programa aberto na bandeja: o GCP-Remoto percebe que foi atualizado e reinicia sozinho quando não há sessão em andamento.
 - Widget de apresentação em janela própria, que nunca cobre a tela; a camada de desenho deixa os cliques passarem e Esc ou o botão direito devolvem o mouse.
 - Linux: janelas pelo X11/XWayland, mais estáveis no KDE Plasma e no GNOME.
-- Atalhos simples por padrão: Alt+1 a Alt+8 para as ferramentas, Alt+0 para limpar, Ctrl+Alt+S/H/C/W para os efeitos.
+- Atalhos simples por padrão: Alt+1 a Alt+8 para as ferramentas, Ctrl+0 para limpar, Ctrl+Alt+S/H/C/W para os efeitos.
 - Novo ícone, janela "Apoie o projeto" com PIX e Stripe, e versão exibida no menu da bandeja.
 
 ## 1.0.0

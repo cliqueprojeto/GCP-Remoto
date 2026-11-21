@@ -174,11 +174,6 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "darkModeSupport": true,
-      "files": [
-        "!node_modules/@nut-tree-fork/libnut-linux/**",
-        "!node_modules/@nut-tree-fork/libnut-win32/**",
-        "!node_modules/x11/**"
-      ],
       "extendInfo": {
         "NSMicrophoneUsageDescription": "O GCP Remoto usa o microfone para a conversa por voz durante as sessões de acesso remoto.",
         "NSScreenCaptureUsageDescription": "O GCP Remoto transmite esta tela para quem você autorizar a acessar o computador.",

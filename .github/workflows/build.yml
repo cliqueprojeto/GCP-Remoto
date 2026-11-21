@@ -148,12 +148,9 @@ jobs:
           set -euo pipefail
           APP=$(ls -d dist/mac*/"GCP Remoto.app" | head -1)
           echo "Aplicativo: $APP"
-          # assina de dentro para fora: módulos nativos, ajudantes e frameworks, depois o aplicativo
-          find "$APP/Contents" \( -name "*.node" -o -name "*.dylib" \) -type f -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"
-          for f in "$APP"/Contents/Frameworks/*.framework "$APP"/Contents/Frameworks/*.app; do
-            [ -e "$f" ] && codesign --force --sign - --timestamp=none --options runtime --entitlements build/entitlements.mac.plist "$f"
-          done
-          codesign --force --sign - --timestamp=none --options runtime --entitlements build/entitlements.mac.plist "$APP"
+          # assinatura recursiva (de dentro para fora): ajudantes, módulos nativos, frameworks e o aplicativo.
+          # No Intel o Electron traz executáveis internos sem assinatura; --deep cobre todos.
+          codesign --force --deep --sign - --timestamp=none --options runtime --entitlements build/entitlements.mac.plist "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
           codesign -dv "$APP" 2>&1 | grep -E "Signature|Identifier|flags" || true
           echo "APP_DIR=$APP" >> "$GITHUB_ENV"

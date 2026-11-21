@@ -289,7 +289,7 @@
   }
 
   // ---------- Atualizações ----------
-  const KIND_LABEL = { nsis: 'Windows (instalado)', portable: 'Windows (portátil)', appimage: 'Linux (AppImage)', pacman: 'Arch / BigLinux / Manjaro (pacote)', deb: 'Ubuntu / Debian (pacote)', rpm: 'Fedora (pacote)', other: 'outro sistema' };
+  const KIND_LABEL = { mac: 'macOS', nsis: 'Windows (instalado)', portable: 'Windows (portátil)', appimage: 'Linux (AppImage)', pacman: 'Arch / BigLinux / Manjaro (pacote)', deb: 'Ubuntu / Debian (pacote)', rpm: 'Fedora (pacote)', other: 'outro sistema' };
   async function renderUpdateBox(box, extra = '') {
     const u = await gcp.invoke('update:info');
     const when = u.lastCheck ? new Date(u.lastCheck).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';

@@ -28,6 +28,7 @@ function installKind() {
     if (fs.existsSync('/usr/bin/rpm')) return 'rpm';
     return 'appimage';
   }
+  if (process.platform === 'darwin') return 'mac';
   return 'other';
 }
 
@@ -38,7 +39,8 @@ function assetName(kind, v) {
     appimage: `GCP-Remoto-${v}-linux-x86_64.AppImage`,
     pacman: `gcp-remoto-${v}-1-x86_64.pkg.tar.zst`,
     deb: `GCP-Remoto-${v}-linux-amd64.deb`,
-    rpm: `GCP-Remoto-${v}-linux-x86_64.rpm`
+    rpm: `GCP-Remoto-${v}-linux-x86_64.rpm`,
+    mac: `GCP-Remoto-${v}-macOS-${process.arch === 'arm64' ? 'arm64' : 'x64'}.dmg`
   }[kind];
 }
 
@@ -104,7 +106,7 @@ async function install(state, { onProgress, appImageTarget, relaunch }) {
   const kind = state.kind;
   let dir;
   if (kind === 'portable') dir = path.dirname(process.env.PORTABLE_EXECUTABLE_FILE);
-  else if (kind === 'pacman' || kind === 'deb' || kind === 'rpm') dir = app.getPath('downloads');
+  else if (kind === 'pacman' || kind === 'deb' || kind === 'rpm' || kind === 'mac') dir = app.getPath('downloads');
   else dir = path.join(app.getPath('temp'), 'gcp-remoto-atualizacao');
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, state.asset.name);
@@ -131,6 +133,10 @@ async function install(state, { onProgress, appImageTarget, relaunch }) {
     try { fs.writeFileSync(path.join(path.dirname(target), 'versao.txt'), state.latest); } catch (_) {}
     relaunch(target);
     return { action: 'restarting', file, message: 'Atualizado. Reiniciando…' };
+  }
+  if (kind === 'mac') {
+    await shell.openPath(file);
+    return { action: 'system-installer', file, message: 'A imagem da nova versão foi aberta. Arraste o GCP Remoto para Aplicativos e substitua; depois abra de novo.' };
   }
   // .pkg.tar.zst / .deb / .rpm: o instalador gráfico do sistema pede a senha; depois o app reinicia sozinho.
   await shell.openPath(file);

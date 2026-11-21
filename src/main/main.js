@@ -191,6 +191,18 @@ function watchForUpdate() {
   }, 15000);
 }
 
+// ---------- macOS: permissões do sistema ----------
+// Gravação de Tela (transmitir a tela), Acessibilidade (receber mouse/teclado) e Microfone (voz).
+function macPermissions(prompt) {
+  if (process.platform !== 'darwin') return null;
+  const { systemPreferences } = require('electron');
+  return {
+    screen: systemPreferences.getMediaAccessStatus('screen'),
+    accessibility: systemPreferences.isTrustedAccessibilityClient(!!prompt),
+    microphone: systemPreferences.getMediaAccessStatus('microphone')
+  };
+}
+
 // ---------- Diagnóstico ----------
 function logLine(...parts) {
   try {
@@ -255,7 +267,7 @@ function buildTrayMenu() {
 
 // ---------- Início automático ----------
 function applyAutostart(enabled) {
-  if (process.platform === 'win32') {
+  if (process.platform === 'win32' || process.platform === 'darwin') {
     app.setLoginItemSettings({ openAtLogin: enabled, args: ['--hidden'] });
     return;
   }
@@ -311,6 +323,9 @@ function registerIpc() {
     wayland: isWayland
   }));
   h('app:show', () => showMain());
+  h('mac:permissions', (_e, prompt) => macPermissions(prompt));
+  h('mac:ask-microphone', () => process.platform === 'darwin' ? require('electron').systemPreferences.askForMediaAccess('microphone') : true);
+  h('mac:open-settings', (_e, pane) => { if (process.platform === 'darwin') shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${pane}`); });
   h('app:quit', () => { quitting = true; app.quit(); });
   h('app:open-external', (_e, url) => { if (/^https?:\/\//.test(url)) shell.openExternal(url); });
 
@@ -515,6 +530,27 @@ function registerIpc() {
 }
 
 // ---------- Ciclo de vida ----------
+const SMOKE = process.argv.includes('--smoke-test');
+async function smokeTest() {
+  const r = { versao: app.getVersion(), sistema: process.platform, arquitetura: process.arch, empacotado: app.isPackaged };
+  const out = (code) => { const line = 'GCP_SMOKE ' + JSON.stringify(r); console.log(line); if (process.env.GCP_SMOKE_OUT) { try { fs.writeFileSync(process.env.GCP_SMOKE_OUT, line + '\n'); } catch (_) {} } app.exit(code); };
+  const fail = (m) => { r.erro = m; out(1); };
+  try {
+    r.controle = input.info();
+    if (!input.backend) return fail('controle de mouse/teclado não carregou: ' + (input.error || ''));
+    try { require('uiohook-napi'); r.cliques = 'ok'; } catch (e) { r.cliques = 'indisponível: ' + e.message; if (process.platform !== 'linux') return fail('uiohook: ' + e.message); }
+    try { require('qrcode'); r.qrcode = 'ok'; } catch (e) { return fail('qrcode: ' + e.message); }
+    await new Promise((res, rej) => { if (!mainWin.webContents.isLoading()) return res(); mainWin.webContents.once('did-finish-load', res); mainWin.webContents.once('did-fail-load', (_e, c, d) => rej(new Error(d))); });
+    const ui = await mainWin.webContents.executeJavaScript(`new Promise(r => setTimeout(() => r({ peer: typeof Peer, id: document.querySelector('#my-id').textContent, gproto: typeof GProto, gvoice: typeof GVoice, nav: document.querySelectorAll('#nav button').length }), 1500))`);
+    r.interface = ui;
+    if (ui.peer !== 'function' || ui.gproto !== 'object' || ui.gvoice !== 'object' || ui.nav < 5 || !/\d/.test(ui.id)) return fail('interface incompleta');
+    const s = await mainWin.webContents.executeJavaScript(`fetch('session.html').then(r => r.ok)`).catch(() => false);
+    r.paginas = s ? 'ok' : 'faltando';
+    r.ok = true;
+    out(0);
+  } catch (e) { fail(e.message); }
+}
+
 app.whenReady().then(() => {
   store = new Store();
   input = new InputController(store);
@@ -538,6 +574,7 @@ app.whenReady().then(() => {
   });
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(['media', 'display-capture', 'clipboard-read', 'clipboard-sanitized-write', 'notifications', 'fullscreen'].includes(perm)));
 
+  if (SMOKE) { createMainWindow(); smokeTest(); setTimeout(() => { console.log('GCP_SMOKE {"erro":"tempo esgotado"}'); app.exit(1); }, 60000); return; }
   logLine('[inicio]', `versão ${app.getVersion()}`, process.platform, process.env.XDG_SESSION_TYPE || '', process.env.APPIMAGE ? 'AppImage' : (app.isPackaged ? 'instalado' : 'desenvolvimento'));
   createTray();
   createMainWindow();
@@ -559,6 +596,7 @@ app.whenReady().then(() => {
 });
 
 app.on('second-instance', showMain);
+app.on('activate', () => { if (!SMOKE) showMain(); });   // macOS: clicar no ícone do Dock reabre a janela
 app.on('will-quit', () => globalShortcut.unregisterAll());
 app.on('before-quit', () => { quitting = true; if (input) input.close(); if (overlay) overlay.close(); });
 app.on('window-all-closed', () => { if (quitting || !tray) app.quit(); });

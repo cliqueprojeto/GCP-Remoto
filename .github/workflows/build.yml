@@ -2,6 +2,8 @@ name: Compilar e publicar
 
 # Os instaladores vão direto para a página de Releases (não usam a cota de
 # armazenamento de artefatos do Actions, que é pequena em repositórios privados).
+# Cada sistema compila, abre o aplicativo empacotado num teste automático e só
+# então publica.
 
 on:
   push:
@@ -54,10 +56,16 @@ jobs:
           node-version: 22
           cache: npm
       - name: Ferramentas de empacotamento
-        run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools zstd
+        run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools zstd xvfb dbus-x11
       - run: npm ci
       - run: npm test
       - run: npm run dist:linux
+      - name: Testar o aplicativo empacotado
+        run: |
+          GCP_REMOTO_PROFILE="$RUNNER_TEMP/perfil" GCP_SMOKE_OUT="$RUNNER_TEMP/smoke.txt" \
+            timeout 120 dbus-run-session -- xvfb-run -a dist/linux-unpacked/gcp-remoto --no-sandbox --smoke-test || true
+          cat "$RUNNER_TEMP/smoke.txt"
+          grep -q '"ok":true' "$RUNNER_TEMP/smoke.txt"
       - name: Assinaturas SHA-256
         run: cd dist && sha256sum *.deb *.rpm *.pkg.tar.zst *.AppImage > SHA256SUMS-linux.txt && cat SHA256SUMS-linux.txt
       - uses: softprops/action-gh-release@v2
@@ -85,6 +93,15 @@ jobs:
       - run: npm test
       - name: Compilar
         run: npx electron-builder --win nsis portable zip --x64 --config.win.signAndEditExecutable=true
+      - name: Testar o aplicativo empacotado
+        shell: pwsh
+        run: |
+          $env:GCP_REMOTO_PROFILE = "$env:RUNNER_TEMP\perfil"
+          $env:GCP_SMOKE_OUT = "$env:RUNNER_TEMP\smoke.txt"
+          $p = Start-Process -FilePath "dist\win-unpacked\GCP Remoto.exe" -ArgumentList "--smoke-test" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "O aplicativo não respondeu ao teste" }
+          Get-Content $env:GCP_SMOKE_OUT
+          if (-not (Select-String -Path $env:GCP_SMOKE_OUT -Pattern '"ok":true' -Quiet)) { throw "Teste do aplicativo falhou" }
       - name: Assinaturas SHA-256
         shell: pwsh
         run: |
@@ -98,3 +115,63 @@ jobs:
             dist/*.exe
             dist/*.zip
             dist/SHA256SUMS-windows.txt
+
+  macos:
+    name: macOS ${{ matrix.label }}
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+            label: Apple Silicon (M1, M2, M3, M4…)
+          - os: macos-15-intel
+            arch: x64
+            label: Intel
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Conferir a arquitetura da máquina
+        run: node -e "if (process.arch !== '${{ matrix.arch }}') { console.error('arquitetura ' + process.arch); process.exit(1) }"
+      - run: npm ci
+      - run: npm test
+      - name: Compilar (assinatura local ad hoc)
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never
+      - name: Instalar o DMG, verificar a assinatura e testar o aplicativo
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .cache/dmg .cache/instalado .cache/zip
+          DMG=$(ls dist/*.dmg | head -1)
+          hdiutil verify "$DMG"
+          hdiutil attach "$DMG" -nobrowse -mountpoint "$PWD/.cache/dmg"
+          ditto ".cache/dmg/GCP Remoto.app" ".cache/instalado/GCP Remoto.app"
+          hdiutil detach "$PWD/.cache/dmg"
+          codesign --verify --deep --strict --verbose=2 ".cache/instalado/GCP Remoto.app"
+          lipo -archs ".cache/instalado/GCP Remoto.app/Contents/MacOS/GCP Remoto"
+          for origem in instalado zip; do
+            if [ "$origem" = zip ]; then ditto -x -k dist/*.zip .cache/zip; fi
+            APP=".cache/$origem/GCP Remoto.app/Contents/MacOS/GCP Remoto"
+            rm -f "$RUNNER_TEMP/smoke.txt"
+            GCP_REMOTO_PROFILE="$RUNNER_TEMP/perfil-$origem" GCP_SMOKE_OUT="$RUNNER_TEMP/smoke.txt" "$APP" --smoke-test &
+            PID=$!
+            for i in $(seq 1 120); do [ -s "$RUNNER_TEMP/smoke.txt" ] && break; sleep 1; done
+            kill "$PID" 2>/dev/null || true
+            echo "== $origem"; cat "$RUNNER_TEMP/smoke.txt"
+            grep -q '"ok":true' "$RUNNER_TEMP/smoke.txt"
+          done
+      - name: Assinaturas SHA-256
+        run: cd dist && shasum -a 256 *.dmg *.zip > "SHA256SUMS-macOS-${{ matrix.arch }}.txt" && cat "SHA256SUMS-macOS-${{ matrix.arch }}.txt"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          overwrite_files: true
+          files: |
+            dist/*.dmg
+            dist/*.zip
+            dist/SHA256SUMS-macOS-*.txt

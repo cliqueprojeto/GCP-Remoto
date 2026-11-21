@@ -1,7 +1,7 @@
 'use strict';
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
-const INVOKE_PREFIXES = ['app:', 'settings:', 'pw:', 'auth:', 'favorites:', 'recents:', 'session:', 'win:', 'screens:', 'capture:', 'input:', 'overlay:', 'effects:', 'clipboard:', 'files:', 'xfer:', 'file:', 'screenshot:', 'notify', 'tray:', 'notice:', 'support:', 'update:'];
+const INVOKE_PREFIXES = ['app:', 'settings:', 'pw:', 'auth:', 'favorites:', 'recents:', 'session:', 'win:', 'screens:', 'capture:', 'input:', 'overlay:', 'effects:', 'clipboard:', 'files:', 'xfer:', 'file:', 'screenshot:', 'notify', 'tray:', 'notice:', 'support:', 'update:', 'mac:'];
 const SEND_CHANNELS = ['input:event', 'overlay:op', 'overlay:tool', 'overlay:focus', 'overlay:action', 'widget:resize'];
 const ON_CHANNELS = ['files:clip-changed', 'notice:update', 'xfer:cancel', 'update:available', 'update:progress', 'overlay:tool', 'overlay:shortcut', 'support:open', 'pw:changed', 'settings:changed', 'recents:changed', 'effects:changed', 'overlay:state', 'overlay:cursor', 'overlay:click', 'overlay:op', 'overlay:local-op'];
 

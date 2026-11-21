@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 1.4.0
+
+- macOS: versões para Apple Silicon (M1, M2, M3, M4…) e Intel, em DMG e ZIP, com assinatura local (ad hoc).
+- macOS: controle de mouse e teclado, transmissão de tela, conversa por voz, área de transferência de arquivos do Finder (Ctrl+C / Ctrl+V entre computadores), início com o sistema e atualizações pelo GitHub.
+- macOS: aviso amigável para liberar Gravação de Tela e Acessibilidade em Ajustes do Sistema, e pedido de permissão do microfone.
+- Mac controlando Windows ou Linux: a tecla Cmd funciona como Ctrl (Cmd+C, Cmd+V, Cmd+Z…).
+- Compilação automática testa o aplicativo empacotado em Windows, Linux, macOS Apple Silicon e macOS Intel antes de publicar.
+
 ## 1.3.0
 
 - Conversa por voz durante a sessão, nos dois sentidos, sem precisar de Google Meet: microfone, headset, fone USB ou Bluetooth e interfaces de áudio, com cancelamento de eco, redução de ruído e ganho automático.

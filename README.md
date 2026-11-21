@@ -1,15 +1,14 @@
 # GCP-Remoto
 
-## Novidades 1.3.0
+## Novidades 1.4.0
 
-- **Converse por voz dentro da sessão**, sem abrir Google Meet: microfone, headset, fone USB ou Bluetooth e interfaces de áudio, com cancelamento de eco e indicador de nível ao vivo no ícone.
-- **Desenhos que desvanecem sozinhos**, com tempo na tela e velocidade da animação ajustáveis.
-- **KDE Plasma (Wayland):** os desenhos aparecem por cima das janelas na hora, sem clicar no ícone do programa.
-- **Barra da sessão em tela cheia** que só abre ao clicar, para não atrapalhar guias e botões no topo.
+- **Agora também no macOS**, para Macs com **Apple Silicon (M1, M2, M3, M4…)** e **Intel**: acesso e controle, transmissão de tela, voz, desenho ao vivo e arquivos com Ctrl+C / Ctrl+V, entre Mac, Windows e Linux nos dois sentidos.
+- Mac controlando Windows ou Linux: a tecla **Cmd funciona como Ctrl** (Cmd+C, Cmd+V, Cmd+Z…).
+- Cada versão é compilada e **testada aberta** em Windows, Linux, macOS Apple Silicon e macOS Intel antes de ser publicada.
 
-Na versão 1.2.0: Ctrl+C / Ctrl+V direto entre computadores, com janela de progresso e "Colar na Área de Trabalho". Na 1.1.0: desempenho quase em tempo real, ponteiro preciso, teste de conexão e atualizações pelo GitHub. Na 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
+Na versão 1.3.0: conversa por voz, desenhos que desvanecem, desenhos por cima no KDE Wayland e barra da sessão ao clicar. Na 1.2.0: Ctrl+C / Ctrl+V direto entre computadores, com janela de progresso e "Colar na Área de Trabalho". Na 1.1.0: desempenho quase em tempo real, ponteiro preciso, teste de conexão e atualizações pelo GitHub. Na 1.0.2: instalação em dois cliques e AppImage que se instala sozinho. Na 1.0.1: reinício automático após atualizar, widget em janela própria e atalhos simples. Na 1.0.0: acesso remoto entre Windows e Linux nos dois sentidos, desenho ao vivo, arquivos com Ctrl+C / Ctrl+V e pacote para Arch, BigLinux e Manjaro. Veja o [histórico de versões](HISTORICO.md).
 
-**Acesso remoto gratuito, livre e completo, com interface em português.**
+**Acesso remoto gratuito, livre e completo, com interface em português — Windows, macOS e Linux.**
 
 O GCP-Remoto reúne num só programa o que se espera de uma ferramenta profissional de suporte e acesso remoto: controle total do mouse e do teclado, senha nova a cada sessão, acesso não supervisionado, favoritos com nome personalizado, transferência de arquivos, chat e ferramentas de apresentação para explicar e ensinar na tela da outra pessoa. Sem cadastro, sem anúncios e sem limite de tempo. Tudo vem dentro do próprio instalador.
 
@@ -42,8 +41,13 @@ Baixe a versão mais recente na página de [versões publicadas](https://github.
 | **Ubuntu, Debian, Mint, Zorin** | `GCP-Remoto-x.y.z-linux-amd64.deb` | Dois cliques abrem a loja de aplicativos; clique em **Instalar**. |
 | **Fedora, openSUSE** | `GCP-Remoto-x.y.z-linux-x86_64.rpm` | Dois cliques abrem o GNOME Software ou o Discover; clique em **Instalar**. |
 | **Windows (pasta compactada)** | `GCP-Remoto-x.y.z-win-x64.zip` | Descompacte e abra `GCP Remoto.exe`. |
+| **macOS — Apple Silicon** (M1, M2, M3, M4…) | `GCP-Remoto-x.y.z-macOS-arm64.dmg` | Abra o DMG e arraste o **GCP Remoto** para **Aplicativos**. |
+| **macOS — Intel** | `GCP-Remoto-x.y.z-macOS-x64.dmg` | Abra o DMG e arraste o **GCP Remoto** para **Aplicativos**. |
+| **macOS (pasta compactada)** | `GCP-Remoto-x.y.z-macOS-arm64.zip` / `-x64.zip` | O mesmo aplicativo, compactado. |
 
 Como o instalador ainda não tem assinatura digital de código, o Windows pode mostrar "O Windows protegeu o computador". Clique em **Mais informações** e depois em **Executar assim mesmo**.
+
+**macOS:** os pacotes têm assinatura local (ad hoc), sem notarização da Apple. Na primeira abertura, o sistema pode bloquear o aplicativo: tente abrir, vá a **Ajustes do Sistema › Privacidade e Segurança › Abrir Mesmo Assim** e confirme. Para ser acessado, libere o GCP Remoto em **Privacidade e Segurança › Gravação de Tela** e **› Acessibilidade** (o próprio programa avisa e abre os Ajustes); o microfone é pedido na primeira conversa por voz. Não sabe qual Mac você tem? Menu  › **Sobre Este Mac**: "Chip Apple" é Apple Silicon; "Processador Intel" é Intel.
 
 **Atualizar:** instale a versão nova por cima, do mesmo jeito. Se o GCP-Remoto estiver aberto na bandeja, ele reinicia sozinho na versão nova quando não houver sessão em andamento.
 
@@ -165,9 +169,10 @@ npm start            # abre o programa
 npm test             # roda os testes automatizados
 npm run dist:linux   # gera .deb, .rpm, .pkg.tar.zst e AppImage em dist/
 npm run dist:win     # gera o instalador, a versão portátil e o zip (no Windows)
+npm run dist:mac     # gera DMG e ZIP para Apple Silicon e Intel (no macOS)
 ```
 
-O workflow **Compilar e publicar** compila no Ubuntu e no Windows a cada envio ao `main`, executa os testes e publica os instaladores na versão indicada em `package.json`.
+O workflow **Compilar e publicar** compila no Ubuntu, no Windows e em Macs Apple Silicon e Intel a cada envio ao `main`, executa os testes, **abre o aplicativo empacotado** num teste automático (`--smoke-test`) e só então publica os instaladores na versão indicada em `package.json`. No macOS ele também monta o DMG, copia o aplicativo e confere a assinatura.
 
 Estrutura:
 

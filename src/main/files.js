@@ -17,8 +17,20 @@ function ps(script) {
   });
 }
 
+function macPlistPaths(xml) {
+  return [...String(xml || '').matchAll(/<string>([^<]+)<\/string>/g)].map(m => m[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'"));
+}
+function macReadFiles() {
+  const f = clipboard.availableFormats();
+  let paths = [];
+  if (f.includes('NSFilenamesPboardType')) paths = macPlistPaths(clipboard.read('NSFilenamesPboardType'));
+  if (!paths.length) { const u = clipboard.read('public.file-url'); if (u) { try { paths = [decodeURIComponent(new URL(u).pathname)]; } catch (_) {} } }
+  return paths.filter(p => p && fs.existsSync(p));
+}
+
 async function readClipboardFiles() {
   try {
+    if (process.platform === 'darwin') return macReadFiles();
     if (process.platform === 'win32') {
       const out = await ps('[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-Clipboard -Format FileDropList | ForEach-Object { $_.FullName }');
       return out.split(/\r?\n/).map(s => s.trim()).filter(p => p && fs.existsSync(p));
@@ -39,6 +51,13 @@ async function readClipboardFiles() {
 
 async function writeClipboardFiles(paths) {
   if (!paths.length) return false;
+  if (process.platform === 'darwin') {
+    // Finder: lista de caminhos no formato NSFilenamesPboardType (plist)
+    const esc = (p) => p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const plist = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><array>' + paths.map(p => `<string>${esc(p)}</string>`).join('') + '</array></plist>';
+    clipboard.writeBuffer('NSFilenamesPboardType', Buffer.from(plist, 'utf8'));
+    return true;
+  }
   if (process.platform === 'win32') {
     const list = paths.map(p => `'${p.replace(/'/g, "''")}'`).join(',');
     await ps(`Set-Clipboard -Path ${list}`);
@@ -179,6 +198,7 @@ function startClipWatch(cb) {
   const tick = async () => {
     let sig = '';
     try {
+      if (process.platform === 'darwin') { sig = macReadFiles().join('|'); if (sig === last) return; last = sig; cb(sig ? sig.split('|') : []); return; }
       const f = clipboard.availableFormats();
       const fmt = f.find(x => x === 'text/uri-list') || f.find(x => x === 'x-special/gnome-copied-files');
       sig = fmt ? clipboard.readBuffer(fmt).toString('utf8') : (/^file:\/\//m.test(clipboard.readText()) ? clipboard.readText() : '');

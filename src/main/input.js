@@ -12,11 +12,11 @@ function findDisplay(displayId) {
   return all.find(d => String(d.id) === String(displayId)) || screen.getPrimaryDisplay();
 }
 
-// ---------------- Backend libnut (Windows / X11) ----------------
+// ---------------- Backend libnut (Windows / macOS / X11) ----------------
 class LibnutBackend {
   constructor() {
-    this.name = process.platform === 'win32' ? 'windows' : 'x11';
-    this.nut = require(process.platform === 'win32' ? '@nut-tree-fork/libnut-win32' : '@nut-tree-fork/libnut-linux');
+    this.name = { win32: 'windows', darwin: 'macos' }[process.platform] || 'x11';
+    this.nut = require({ win32: '@nut-tree-fork/libnut-win32', darwin: '@nut-tree-fork/libnut-darwin' }[process.platform] || '@nut-tree-fork/libnut-linux');
     this.nut.setMouseDelay(0);
     this.nut.setKeyboardDelay(0);
     if (process.platform === 'linux') {
@@ -34,6 +34,7 @@ class LibnutBackend {
       const p = screen.dipToScreenPoint(dip);
       return { x: Math.round(p.x), y: Math.round(p.y) };
     }
+    if (process.platform === 'darwin') return { x: Math.round(dip.x), y: Math.round(dip.y) }; // macOS usa pontos (já em DIP)
     const sf = d.scaleFactor || 1;
     return { x: Math.round(dip.x * sf), y: Math.round(dip.y * sf) };
   }
@@ -48,8 +49,9 @@ class LibnutBackend {
     if (dx) this.nut.scrollMouse(dx, 0);
   }
   key(code, down) {
-    const k = libnutName(code);
+    let k = libnutName(code);
     if (!k) return;
+    if (process.platform === 'darwin') k = { meta: 'command', right_meta: 'command', control: 'control', right_control: 'control' }[k] || k;
     const run = () => { try { this.nut.keyToggle(k, down ? 'down' : 'up'); } catch (_) { /* tecla não suportada no layout */ } };
     if (this.xkbd) return this.xkbd.enqueue(run);
     run();
@@ -57,7 +59,7 @@ class LibnutBackend {
   type(text) {
     if (!text) return;
     if (this.xkbd) return this.xkbd.type(text);       // X11: acentos e símbolos em qualquer layout
-    this.nut.typeString(text);                          // Windows: Unicode nativo (SendInput)
+    this.nut.typeString(text);                          // Windows/macOS: Unicode nativo (acentos em qualquer layout)
   }
   close() {}
 }

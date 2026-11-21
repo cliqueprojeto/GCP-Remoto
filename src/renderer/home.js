@@ -319,6 +319,19 @@
     if (p.state !== 'run') setTimeout(() => { el.remove(); xferEls.delete(p.tid); }, p.state === 'done' ? 3500 : 7000);
   });
 
+  // ---------- macOS: permissões ----------
+  async function checkMacPermissions() {
+    if (gcp.platform !== 'darwin') return;
+    const p = await gcp.invoke('mac:permissions', false);
+    const missing = [];
+    if (p.screen !== 'granted') missing.push(['Gravação de Tela', 'Privacy_ScreenCapture', 'para transmitir esta tela']);
+    if (!p.accessibility) missing.push(['Acessibilidade', 'Privacy_Accessibility', 'para aceitar o controle de mouse e teclado']);
+    if (!missing.length) return;
+    const ok = await modal({ title: 'Permissões do macOS', body: `<p>Para ser acessado, o macOS exige que você libere o GCP Remoto em <b>Ajustes do Sistema › Privacidade e Segurança</b>:</p><ul>${missing.map(m => `<li><b>${m[0]}</b> — ${m[2]}</li>`).join('')}</ul><p>Depois de liberar, feche e abra o GCP Remoto.</p>`, actions: [{ label: 'Depois', value: false }, { label: 'Abrir Ajustes', kind: 'primary', value: true }] });
+    if (ok) { if (!p.accessibility) await gcp.invoke('mac:permissions', true); gcp.invoke('mac:open-settings', missing[0][1]); }
+  }
+  setTimeout(checkMacPermissions, 1500);
+
   // ---------- Início ----------
   refreshIdentity();
   loadData();

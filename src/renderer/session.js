@@ -389,12 +389,15 @@
       return;
     }
     if (altGr && (e.code === 'ControlLeft')) return;
-    S.pressed.add(e.code);
-    send({ t: 'kd', code: e.code, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
+    let code = e.code;
+    // Mac controlando Windows/Linux: Cmd funciona como Ctrl (Cmd+C, Cmd+V, Cmd+Z…)
+    if (gcp.platform === 'darwin' && S.hello && S.hello.os !== 'darwin' && (code === 'MetaLeft' || code === 'MetaRight')) code = code === 'MetaLeft' ? 'ControlLeft' : 'ControlRight';
+    S.pressed.add(e.code); S.codeMap = S.codeMap || {}; S.codeMap[e.code] = code;
+    send({ t: 'kd', code, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
   }, true);
 
   window.addEventListener('keyup', (e) => {
-    if (S.pressed.has(e.code)) { S.pressed.delete(e.code); send({ t: 'ku', code: e.code }); e.preventDefault(); }
+    if (S.pressed.has(e.code)) { S.pressed.delete(e.code); send({ t: 'ku', code: (S.codeMap && S.codeMap[e.code]) || e.code }); e.preventDefault(); }
   }, true);
 
   function releaseKeys() { if (S.pressed.size || S.connected) send({ t: 'release' }); S.pressed.clear(); }

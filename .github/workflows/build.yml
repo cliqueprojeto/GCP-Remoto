@@ -140,8 +140,25 @@ jobs:
         run: node -e "if (process.arch !== '${{ matrix.arch }}') { console.error('arquitetura ' + process.arch); process.exit(1) }"
       - run: npm ci
       - run: npm test
-      - name: Compilar (assinatura local ad hoc)
-        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never
+      - name: Gerar o aplicativo (sem assinar)
+        run: npx electron-builder --mac dir --${{ matrix.arch }} --publish never -c.mac.identity=null
+      - name: Assinar localmente (ad hoc) com codesign e verificar
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=$(ls -d dist/mac*/"GCP Remoto.app" | head -1)
+          echo "Aplicativo: $APP"
+          # assina de dentro para fora: módulos nativos, ajudantes e frameworks, depois o aplicativo
+          find "$APP/Contents" \( -name "*.node" -o -name "*.dylib" \) -type f -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"
+          for f in "$APP"/Contents/Frameworks/*.framework "$APP"/Contents/Frameworks/*.app; do
+            [ -e "$f" ] && codesign --force --sign - --timestamp=none --options runtime --entitlements build/entitlements.mac.plist "$f"
+          done
+          codesign --force --sign - --timestamp=none --options runtime --entitlements build/entitlements.mac.plist "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E "Signature|Identifier|flags" || true
+          echo "APP_DIR=$APP" >> "$GITHUB_ENV"
+      - name: Empacotar DMG e ZIP a partir do aplicativo assinado
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never --prepackaged "${{ env.APP_DIR }}" -c.mac.identity=null
       - name: Instalar o DMG, verificar a assinatura e testar o aplicativo
         shell: bash
         run: |
